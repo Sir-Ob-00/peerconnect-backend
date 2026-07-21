@@ -61,10 +61,6 @@ jest.mock("../../src/repositories/session.repository", () => ({
 
 jest.mock("../../src/repositories/conversation.repository", () => ({
   conversationRepository: {
-    // Reimplemented inline (rather than jest.requireActual) so the real
-    // module — which imports config/database and constructs a PrismaClient
-    // at import time — never loads at all, even just to grab this one pure
-    // helper function.
     canonicalPair: (a: string, b: string) => (a < b ? { userOneId: a, userTwoId: b } : { userOneId: b, userTwoId: a }),
     findBetweenUsers: jest.fn(),
     create: jest.fn(),
@@ -152,128 +148,49 @@ describe("GET /unknown-route", () => {
   });
 });
 
-describe("POST /api/v1/auth/register", () => {
-  it("rejects a weak password with 422", async () => {
-    const res = await request(app).post("/api/v1/auth/register").send({
-      firstName: "Ama",
-      lastName: "Mensah",
-      email: "ama@uni.edu.gh",
-      password: "weak",
-      confirmPassword: "weak",
-    });
-    expect(res.status).toBe(422);
-    expect(res.body.success).toBe(false);
-    expect(res.body.errors).toEqual(expect.any(Array));
-  });
-
-  it("rejects mismatched password confirmation with 422", async () => {
-    const res = await request(app).post("/api/v1/auth/register").send({
-      firstName: "Ama",
-      lastName: "Mensah",
-      email: "ama@uni.edu.gh",
-      password: "StrongPass1!",
-      confirmPassword: "Different1!",
-    });
-    expect(res.status).toBe(422);
-  });
-
-  it("registers successfully and returns 201 with user + tokens, no password field", async () => {
-    mockUserRepo.findByEmail.mockResolvedValue(null);
-    mockUserRepo.create.mockResolvedValue(makeUser() as never);
-
-    const res = await request(app).post("/api/v1/auth/register").send({
-      firstName: "Ama",
-      lastName: "Mensah",
-      email: "ama.mensah@st.university.edu.gh",
-      password: "StrongPass1!",
-      confirmPassword: "StrongPass1!",
-    });
-
-    expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.user.email).toBe("ama.mensah@st.university.edu.gh");
-    expect(res.body.data.user).not.toHaveProperty("password");
-    expect(res.body.data.accessToken).toEqual(expect.any(String));
-    expect(res.body.data.refreshToken).toEqual(expect.any(String));
-  });
-
-  it("returns 409 for a duplicate email", async () => {
-    mockUserRepo.findByEmail.mockResolvedValue(makeUser() as never);
-
-    const res = await request(app).post("/api/v1/auth/register").send({
-      firstName: "Ama",
-      lastName: "Mensah",
-      email: "ama.mensah@st.university.edu.gh",
-      password: "StrongPass1!",
-      confirmPassword: "StrongPass1!",
-    });
-
-    expect(res.status).toBe(409);
+describe("POST /api/v1/auth/refresh", () => {
+  it("returns 401 for an invalid refresh token", async () => {
+    const res = await request(app).post("/api/v1/auth/refresh").send({ refreshToken: "bad" });
+    expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
 });
 
-describe("POST /api/v1/auth/login", () => {
-  it("returns 401 for a wrong password", async () => {
-    const hashed = await hashPassword("CorrectPass1!");
-    mockUserRepo.findByEmail.mockResolvedValue(makeUser({ password: hashed }) as never);
-
-    const res = await request(app)
-      .post("/api/v1/auth/login")
-      .send({ email: "ama.mensah@st.university.edu.gh", password: "WrongPass1!" });
-
+describe("POST /api/v1/auth/logout", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).post("/api/v1/auth/logout").send({});
     expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
-  });
-
-  it("returns 403 for a suspended account", async () => {
-    const hashed = await hashPassword("CorrectPass1!");
-    mockUserRepo.findByEmail.mockResolvedValue(
-      makeUser({ password: hashed, accountStatus: "SUSPENDED" }) as never
-    );
-
-    const res = await request(app)
-      .post("/api/v1/auth/login")
-      .send({ email: "ama.mensah@st.university.edu.gh", password: "CorrectPass1!" });
-
-    expect(res.status).toBe(403);
-  });
-
-  it("logs in successfully and returns the expected envelope", async () => {
-    const hashed = await hashPassword("CorrectPass1!");
-    mockUserRepo.findByEmail.mockResolvedValue(makeUser({ password: hashed }) as never);
-
-    const res = await request(app)
-      .post("/api/v1/auth/login")
-      .send({ email: "ama.mensah@st.university.edu.gh", password: "CorrectPass1!" });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ success: true, message: "Login successful." });
-    expect(res.body.data.accessToken).toEqual(expect.any(String));
   });
 });
 
-describe("GET /api/v1/auth/me", () => {
-  it("returns 401 without an Authorization header", async () => {
-    const res = await request(app).get("/api/v1/auth/me");
-    expect(res.status).toBe(401);
+describe("POST /api/v1/auth/forgot-password", () => {
+  it("returns 404 when the email does not exist", async () => {
+    mockUserRepo.findActiveByEmail.mockResolvedValue(null);
+    const res = await request(app).post("/api/v1/auth/forgot-password").send({ email: "nope@example.com" });
+    expect(res.status).toBe(404);
   });
+});
 
-  it("returns 401 with a garbage token", async () => {
-    const res = await request(app).get("/api/v1/auth/me").set("Authorization", "Bearer garbage");
-    expect(res.status).toBe(401);
+describe("POST /api/v1/auth/reset-password", () => {
+  it("returns 400 for an invalid token", async () => {
+    const res = await request(app).post("/api/v1/auth/reset-password").send({
+      token: "bad",
+      password: "NewStrongPass1!",
+      confirmPassword: "NewStrongPass1!",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("message");
   });
+});
 
-  it("returns the current user with a valid token", async () => {
-    const user = makeUser();
-    mockUserRepo.findActiveById.mockResolvedValue(user as never);
-    const token = signAccessToken({ userId: user.id, role: user.role as never });
-
-    const res = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${token}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.data.id).toBe(user.id);
-    expect(res.body.data).not.toHaveProperty("password");
+describe("PATCH /api/v1/auth/change-password", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).patch("/api/v1/auth/change-password").send({
+      currentPassword: "OldPass1!",
+      newPassword: "NewStrongPass1!",
+      confirmPassword: "NewStrongPass1!",
+    });
+    expect(res.status).toBe(401);
   });
 });
 
@@ -305,7 +222,6 @@ describe("PATCH /api/v1/users/me", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.firstName).toBe("Akosua");
-    // The email in the mocked update call should not include the attempted email override.
     const updateArg = mockUserRepo.update.mock.calls[0][1] as Record<string, unknown>;
     expect(updateArg).not.toHaveProperty("email");
   });

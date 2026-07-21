@@ -35,17 +35,18 @@ export const studentProfileService = {
 
     const updated = await studentProfileRepository.updateByUserId(userId, input);
 
-    // If required fields are present, advance onboarding progress to id_verification
     const requiredFieldsPresent =
       updated.department &&
       updated.level &&
       Array.isArray(updated.skills) && updated.skills.length > 0 &&
-      Array.isArray(updated.learningInterests) && updated.learningInterests.length > 0 &&
       updated.availability &&
       updated.bio;
 
     if (requiredFieldsPresent) {
-      await userRepository.update(userId, { setupProgress: "id_verification" } as any);
+      await userRepository.update(userId, {
+        setupProgress: "id_verification_pending",
+        verificationStatus: "id_verification_pending",
+      } as any);
     }
 
     return toStudentProfileView(updated);

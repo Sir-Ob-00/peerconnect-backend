@@ -11,10 +11,13 @@ import { notificationRouter } from "./notification.routes";
 import { mobileAuthRouter } from "./mobileAuth.routes";
 import { adminAuthRouter } from "./adminAuth.routes";
 import { adminVerificationsRouter } from "./adminVerifications.routes";
+import { frontendAuthRouter } from "./frontendAuth.routes";
 
 export const v1Router = Router();
 
 v1Router.use(healthRouter);
+// Frontend-aligned auth endpoints (primary for mobile app)
+v1Router.use(frontendAuthRouter);
 // Mount mobile-specific routes under /mobile
 v1Router.use("/mobile", mobileAuthRouter);
 // Admin namespace

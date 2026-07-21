@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { mailTransporter } from "../config/mailer";
 import { env } from "../config/env";
 import { logger } from "../config/logger";
@@ -17,12 +18,22 @@ interface SendEmailInput {
  */
 async function sendEmail(input: SendEmailInput): Promise<void> {
   try {
-    await mailTransporter.sendMail({
+    const info = await mailTransporter.sendMail({
       from: env.EMAIL_FROM,
       to: input.to,
       subject: input.subject,
       html: input.html,
     });
+
+    if (env.isDevelopment) {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      logger.info(
+        `Email sent successfully\n` +
+          `Recipient: ${input.to}\n` +
+          `Message ID: ${info.messageId ?? "N/A"}\n` +
+          `Ethereal Preview URL: ${previewUrl || "N/A"}`
+      );
+    }
   } catch (err) {
     logger.error(`Failed to send email to ${input.to}: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
@@ -42,11 +53,12 @@ export const emailService = {
   sendEmail,
 
   async sendVerificationOtp(to: string, otp: string): Promise<void> {
-    const subject = "Your PeerConnect verification code";
+    const subject = "PeerConnect Student Verification OTP";
     const html = baseTemplate(
       "Verify your email",
       `<p>Hi,</p>
-       <p>Your PeerConnect verification code is <strong>${otp}</strong>. It expires in ${env.OTP_EXPIRES_MINUTES} minutes.</p>
+       <p>Your PeerConnect verification code is <strong>${otp}</strong>.</p>
+       <p>This OTP expires in ${env.OTP_EXPIRES_MINUTES} minutes.</p>
        <p>If you did not request this code, you can ignore this email.</p>`
     );
     await sendEmail({ to, subject, html });

@@ -50,7 +50,10 @@ const envSchema = z.object({
   // Email (Phase 8 — Nodemailer)
   SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_SECURE: z
+    .string()
+    .default("false")
+    .transform((val) => val.toLowerCase() === "true"),
   SMTP_USER: z.string().min(1, "SMTP_USER is required"),
   SMTP_PASSWORD: z.string().min(1, "SMTP_PASSWORD is required"),
   EMAIL_FROM: z.string().min(1, "EMAIL_FROM is required").default("PeerConnect <no-reply@peerconnect.app>"),

@@ -10,6 +10,7 @@ import { generateSecureToken, hashToken } from "../utils/token.util";
 import { ApiError } from "../utils/ApiError";
 import { toPublicUser, type PublicUser } from "../dtos/user.dto";
 import { env } from "../config/env";
+import { logger } from "../config/logger";
 import { AUTH_CONSTANTS } from "../constants/auth.constants";
 import type { ForgotPasswordInput, LoginInput, RegisterInput, ResetPasswordInput } from "../validators/auth.validator";
 
@@ -229,16 +230,15 @@ export const authService = {
       const { validateUniversityEmailOrThrow } = await import("../utils/email.util");
       validateUniversityEmailOrThrow(input.email);
     } catch (err) {
-      throw ApiError.badRequest("Only university student emails are allowed");
+      throw ApiError.badRequest("Use your university email address");
     }
 
     const existing = await userRepository.findByEmail(input.email);
     if (existing) {
-      throw ApiError.conflict("Email is already registered.");
+      throw ApiError.conflict("Email is already registered");
     }
 
     const hashedPassword = await hashPassword(input.password);
-    // split fullName if provided
     let firstName = input.firstName ?? "";
     let lastName = input.lastName ?? "";
     if ((input as any).fullName && !firstName && !lastName) {
@@ -253,13 +253,13 @@ export const authService = {
       email: input.email,
       password: hashedPassword,
       role: "STUDENT",
-      // studentVerified left false until admin approves final ID verification
-      // isEmailVerified left false until OTP verified
+      setupProgress: "email_verification",
+      verificationStatus: "email_pending",
     });
 
     // Issue an email verification token (6-digit OTP). Persist hashed token and return plaintext in dev.
     await emailVerificationTokenRepository.invalidateAllForUser(user.id);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit numeric
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const tokenHash = hashToken(otp);
     await emailVerificationTokenRepository.create({
       userId: user.id,
@@ -267,19 +267,23 @@ export const authService = {
       expiresAt: new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000),
     });
 
-    // Send via email in production; in development return OTP in response for testing
-    if (env.isDevelopment) {
-      return { email: user.email, otp };
+    // Create empty student profile and save university if provided
+    const { studentProfileRepository } = await import("../repositories/studentProfile.repository");
+    await studentProfileRepository.getOrCreateByUserId(user.id);
+    if ((input as any).university) {
+      await studentProfileRepository.updateByUserId(user.id, { university: (input as any).university });
     }
 
-    // Production: send email (doesn't return OTP)
+    // Send email in both dev and production; only return OTP in dev for testing
     try {
       const { emailService } = await import("../services/email.service");
       await emailService.sendVerificationOtp(user.email, otp);
     } catch (err) {
-      // Log & continue — creation succeeded even if email send failed
-      // eslint-disable-next-line no-console
-      console.error("Failed to send verification OTP email:", err);
+      logger.error("Failed to send verification OTP email:", err);
+    }
+
+    if (env.isDevelopment) {
+      return { email: user.email, otp };
     }
 
     return { email: user.email };
@@ -289,14 +293,13 @@ export const authService = {
   async verifyEmailOtp(email: string, otp: string): Promise<AuthResult> {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      throw ApiError.badRequest("Invalid email or OTP.");
+      throw ApiError.badRequest("Invalid or expired OTP");
     }
 
     const tokenHash = hashToken(otp);
     const stored = await emailVerificationTokenRepository.findByTokenHash(tokenHash);
     const isValid = stored && !stored.usedAt && stored.expiresAt.getTime() > Date.now() && stored.userId === user.id;
     if (!isValid) {
-      // On invalid OTP, increment attempts on latest token for this user and enforce max attempts
       const latest = await emailVerificationTokenRepository.findLatestForUser(user.id);
       if (latest) {
         const updated = await emailVerificationTokenRepository.incrementAttempts(latest.id);
@@ -305,27 +308,22 @@ export const authService = {
           throw ApiError.tooManyRequests("Too many OTP verification attempts. Please request a new code.");
         }
       }
-      throw ApiError.badRequest("Invalid or expired OTP.");
+      throw ApiError.badRequest("Invalid or expired OTP");
     }
 
-    // Mark used
     await emailVerificationTokenRepository.markUsed(stored.id);
 
-    // Update user verification flags and progress
     await userRepository.update(user.id, {
       isEmailVerified: true,
       studentVerified: false,
-      verificationStatus: "pending",
-      setupProgress: "profile",
+      verificationStatus: "profile_incomplete",
+      setupProgress: "profile_incomplete",
     } as any);
 
-    // Issue tokens now that email is verified
     const freshUser = await userRepository.findById(user.id);
     if (!freshUser) throw ApiError.notFound("User not found after verification.");
 
     const tokens = await issueTokens(freshUser);
-
-    // Return public user + tokens
     return { user: toPublicUser(freshUser), ...tokens };
   },
 
@@ -346,8 +344,19 @@ export const authService = {
       expiresAt: new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000),
     });
 
-    // Return OTP in dev/test — production should email instead.
-    return { email: user.email, otp };
+    // Send email in both dev and production; only return OTP in dev for testing
+    try {
+      const { emailService } = await import("../services/email.service");
+      await emailService.sendVerificationOtp(user.email, otp);
+    } catch (err) {
+      logger.error("Failed to send verification OTP email:", err);
+    }
+
+    if (env.isDevelopment) {
+      return { email: user.email, otp };
+    }
+
+    return { email: user.email };
   },
 
   async loginAdmin(input: LoginInput): Promise<AuthResult> {
@@ -396,15 +405,85 @@ export const authService = {
     return { user: toPublicUser(user), ...tokens };
   },
 
-  async submitIdVerification(userId: string, photoUrl: string): Promise<void> {
+  async submitIdVerification(userId: string, photoUrl: string): Promise<User> {
     const user = await userRepository.findActiveById(userId);
     if (!user) throw ApiError.notFound("User not found.");
 
-    await userRepository.update(userId, {
+    const updated = await userRepository.update(userId, {
       idPhotoUrl: photoUrl,
       setupProgress: "pending_approval",
-      verificationStatus: "pending",
-      // studentVerified stays false until admin approval
+      verificationStatus: "pending_approval",
     } as any);
+
+    return updated;
+  },
+
+  async forgotPasswordOtp(email: string): Promise<{ otp?: string }> {
+    const user = await userRepository.findActiveByEmail(email);
+
+    if (!user) {
+      return {};
+    }
+
+    await passwordResetTokenRepository.invalidateAllForUser(user.id);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const tokenHash = hashToken(otp);
+    await passwordResetTokenRepository.create({
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000),
+    });
+
+    // Send email in both dev and production; only return OTP in dev for testing
+    try {
+      const { emailService } = await import("../services/email.service");
+      await emailService.sendVerificationOtp(user.email, otp);
+    } catch (err) {
+      logger.error("Failed to send password reset OTP email:", err);
+    }
+
+    if (env.isDevelopment) {
+      return { otp };
+    }
+
+    return {};
+  },
+
+  async resetPasswordWithOtp(email: string, otp: string, newPassword: string): Promise<void> {
+    const user = await userRepository.findActiveByEmail(email);
+    if (!user) {
+      throw ApiError.badRequest("Invalid or expired OTP");
+    }
+
+    const tokenHash = hashToken(otp);
+    const resetToken = await passwordResetTokenRepository.findByTokenHash(tokenHash);
+
+    const isValid = resetToken && !resetToken.usedAt && resetToken.expiresAt.getTime() > Date.now() && resetToken.userId === user.id;
+    if (!isValid) {
+      throw ApiError.badRequest("Invalid or expired OTP");
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    await userRepository.update(user.id, { password: hashedPassword });
+    await passwordResetTokenRepository.markUsed(resetToken.id);
+
+    await refreshTokenRepository.revokeAllForUser(user.id);
+  },
+
+  /**
+   * Get user by email (for validation/lookup)
+   */
+  async getUserByEmail(email: string): Promise<User | null> {
+    const user = await userRepository.findByEmail(email);
+    return user;
+  },
+
+  /**
+   * Update user fields (for profile edits, avatar, etc.)
+   */
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    const user = await userRepository.update(userId, data);
+    return user;
   },
 };

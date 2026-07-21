@@ -54,6 +54,7 @@ model User {
 
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   studentProfile      StudentProfile?
   sentSessions        Session[]            @relation("SessionRequester")
   receivedSessions    Session[]            @relation("SessionReceiver")
@@ -63,6 +64,9 @@ model User {
   reviewsGiven        Review[]             @relation("ReviewReviewer")
   reviewsReceived     Review[]             @relation("ReviewReceiver")
   notifications       Notification[]
+  createdChatRooms    ChatRoom[]
+  chatMemberships     ChatMember[]
+  chatMessages        ChatMessage[]
 
   @@map("users")
 }
@@ -90,6 +94,7 @@ model StudentProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  university         String?
   department        String?
   level             String?
   skills            String[] @default([])

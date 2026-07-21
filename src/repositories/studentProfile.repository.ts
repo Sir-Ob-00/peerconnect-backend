@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 export type StudentProfileWritableData = Partial<
   Pick<
     Prisma.StudentProfileUncheckedCreateInput,
+    | "university"
     | "department"
     | "level"
     | "skills"

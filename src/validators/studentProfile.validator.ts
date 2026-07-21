@@ -16,6 +16,7 @@ const learningInterestsArray = z
 
 export const updateStudentProfileSchema = z
   .object({
+    university: z.string().trim().min(2, "University must be at least 2 characters").max(100).optional(),
     department: z.string().trim().min(2, "Department must be at least 2 characters").max(100).optional(),
     level: z.string().trim().min(1, "Level is required").max(50).optional(),
     skills: skillsArray.optional(),
