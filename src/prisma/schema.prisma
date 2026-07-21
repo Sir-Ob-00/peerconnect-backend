@@ -1,0 +1,380 @@
+// ---------------------------------------------------------------------------
+// PeerConnect — Prisma schema
+// Phase 2 scope: Authentication & User Management.
+//
+// Design notes:
+// - `isEmailVerified` exists now but nothing in this phase enforces it —
+//   that's intentional. Wiring an OTP flow later only means: (1) flip
+//   `isEmailVerified` to false on register instead of leaving it default,
+//   (2) add an EmailVerificationToken model mirroring PasswordResetToken,
+//   (3) add an `authenticate` check. No schema changes to User required.
+// - RefreshToken rows are stored (hashed) rather than trusting a stateless
+//   JWT alone, so a specific session can be revoked (logout, or later,
+//   "log out of all devices") without waiting for expiry.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id              String        @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String        @unique
+  password        String
+  role            Role          @default(STUDENT)
+  accountStatus   AccountStatus @default(ACTIVE)
+  profileImage    String?
+  idPhotoUrl      String?
+  isEmailVerified Boolean       @default(false)
+  studentVerified   Boolean       @default(false)
+  verificationStatus String       @default("unverified")
+  setupProgress     String       @default("email")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  studentProfile      StudentProfile?
+  sentSessions        Session[]            @relation("SessionRequester")
+  receivedSessions    Session[]            @relation("SessionReceiver")
+  conversationsAsOne  Conversation[]       @relation("ConversationUserOne")
+  conversationsAsTwo  Conversation[]       @relation("ConversationUserTwo")
+  sentMessages        Message[]            @relation("MessageSender")
+  reviewsGiven        Review[]             @relation("ReviewReviewer")
+  reviewsReceived     Review[]             @relation("ReviewReceiver")
+  notifications       Notification[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Student Profile Management.
+//
+// One-to-one with User. Deliberately does NOT include: portfolio, social
+// links, profile analytics, or a completion percentage — out of scope for
+// this phase per spec, and easy to add later as additional columns/relations
+// without touching what's here.
+//
+// `profilePhoto` (uploaded via Cloudinary, POST /profile/photo) is distinct
+// from `User.profileImage` (Phase 2, editable via PATCH /users/me). Both
+// exist because each phase's spec asked for its own field; see the README
+// for which one the API treats as canonical for student-facing profile views.
+//
+// `isAvailable` (Phase 5) is intentionally separate from `availability`:
+// `availability` is a free-text description ("weekdays after 5pm"), while
+// `isAvailable` is the actual boolean gate Phase 5's session-accept flow
+// checks. See the README for the full reasoning.
+// ---------------------------------------------------------------------------
+model StudentProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  department        String?
+  level             String?
+  skills            String[] @default([])
+  learningInterests String[] @default([])
+  bio               String?
+  availability      String?
+  isAvailable       Boolean  @default(true)
+  profilePhoto      String?
+  studentId         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([department])
+  @@map("student_profiles")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+enum SessionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Learning Session Management.
+//
+// A `requester` asks a `receiver` for help with a `skill`. Deliberately does
+// NOT include: calendar sync, a reminder scheduler, attachments, multiple
+// session "types", or rescheduling history — out of scope per spec.
+//
+// Two relations to User (requester/receiver) need distinct relation names so
+// Prisma can tell them apart; `sentSessions`/`receivedSessions` on User are
+// the corresponding back-relations.
+// ---------------------------------------------------------------------------
+model Session {
+  id            String        @id @default(uuid())
+  requesterId   String
+  requester     User          @relation("SessionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiverId    String
+  receiver      User          @relation("SessionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  skill         String
+  message       String?
+  status        SessionStatus @default(PENDING)
+  scheduledDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  @@index([receiverId, status])
+  @@index([requesterId])
+  @@index([receiverId])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6 — Real-Time Chat.
+//
+// One-to-one only (no group chats). A Conversation is created lazily — the
+// first time two users message each other — rather than via a separate
+// "start conversation" step; see chat.service.ts `getOrCreateConversation`.
+//
+// `userOneId`/`userTwoId` are always stored in a canonical order (lower id
+// first) so the same pair of users can never end up with two separate
+// conversation rows depending on who messaged first — enforced by the
+// unique constraint below plus the canonicalization in the service layer.
+//
+// Deliberately does NOT include: voice notes, general file sharing, message
+// forwarding, pinned/archived chats, search, or blocking — out of scope per
+// spec.
+// ---------------------------------------------------------------------------
+model Conversation {
+  id         String   @id @default(uuid())
+  userOneId  String
+  userOne    User     @relation("ConversationUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwoId  String
+  userTwo    User     @relation("ConversationUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  messages Message[]
+
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId])
+  @@index([userTwoId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String?
+  imageUrl       String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7 — Student Reviews.
+//
+// One review per completed Session — enforced by `sessionId` being unique,
+// not just checked in application code, so even a race condition (two
+// near-simultaneous review submissions for the same session) can't create
+// duplicates; the second insert fails the unique constraint and surfaces as
+// a 409 via the existing Prisma-error mapping in errorHandler.ts.
+//
+// `receiverId` is never supplied by the client — the service derives it
+// server-side as "whichever session participant isn't the reviewer," so
+// there's no way to submit a review for a session you didn't take part in
+// or to name an arbitrary receiver.
+//
+// Deliberately does NOT include: leaderboards, badges, a reputation engine,
+// achievements, or review reactions — out of scope per spec. Average rating
+// is computed on read via a Prisma aggregate query, not cached on User or
+// StudentProfile — see the README for why.
+// ---------------------------------------------------------------------------
+model Review {
+  id         String   @id @default(uuid())
+  sessionId  String   @unique
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User     @relation("ReviewReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([receiverId])
+  @@index([reviewerId])
+  @@map("reviews")
+}
+
+enum NotificationType {
+  SESSION_REQUEST
+  SESSION_ACCEPTED
+  CHAT_MESSAGE
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8 — Notifications.
+//
+// A flat, simple table on purpose — no `relatedId`/deep-link column, no read
+// timestamp beyond the boolean, no per-type payload shape. `createNotification()`
+// (notification.service.ts) is the one reusable entry point every other
+// service goes through — Session (request/accept) and Chat (new message) call
+// it rather than writing to this table directly. It handles persistence +
+// the real-time Socket.IO push; email (Session request/accept only, per
+// spec) is triggered separately by the caller — see the README for why
+// that's not baked into this function.
+//
+// Deliberately does NOT include: a queue (BullMQ or otherwise), marketing
+// preferences, or scheduled announcements — out of scope per spec.
+// ---------------------------------------------------------------------------
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Chat: new models for group chats and chat rooms. Kept separate from the
+// existing Conversation/Message tables which power 1:1 direct chats to avoid
+// breaking existing Phase 6 functionality.
+// ---------------------------------------------------------------------------
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+model ChatRoom {
+  id          String    @id @default(uuid())
+  type        ChatType  @default(GROUP)
+  name        String?
+  description String?
+  imageUrl    String?
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  members ChatMember[]
+  messages ChatMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@map("chat_rooms")
+}
+
+model ChatMember {
+  id         String   @id @default(uuid())
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       GroupRole @default(MEMBER)
+  joinedAt   DateTime @default(now())
+
+  @@unique([chatRoomId, userId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model ChatMessage {
+  id         String      @id @default(uuid())
+  chatRoomId String
+  chatRoom   ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content    String?
+  messageType MessageType @default(TEXT)
+  isRead     Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+
+  @@index([chatRoomId, createdAt])
+  @@index([senderId])
+  @@map("chat_messages")
+}
