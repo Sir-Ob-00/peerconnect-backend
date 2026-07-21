@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { mobileAuthController } from "../../controllers/mobileAuth.controller";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { authenticate, requireStudent } from "../../middlewares/authenticate";
+import { authenticate } from "../../middlewares/authenticate";
 import {
   mobileRegisterSchema,
   mobileVerifySchema,

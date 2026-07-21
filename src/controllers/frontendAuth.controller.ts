@@ -11,6 +11,7 @@ import { studentProfileRepository } from "../repositories/studentProfile.reposit
 import { onlineUsersRegistry } from "../sockets/onlineUsers.registry";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
+import { validateUniversityEmailOrThrow } from "../utils/email.util";
 
 function buildFrontendUser(user: any, profile: any = {}) {
   return {
@@ -65,22 +66,9 @@ export const frontendAuthController = {
     }
 
     const emailLower = email.toLowerCase();
-    const allowedDomains = [
-      "st.university.edu.gh",
-      "student.university.edu.gh",
-      "stu.ug.edu.gh",
-      "st.knust.edu.gh",
-      "st.uenr.edu.gh",
-      "st.ucc.edu.gh",
-      "st.umat.edu.gh",
-      "st.uhas.edu.gh",
-    ];
-
-    const hasValidDomain = allowedDomains.some(
-      (domain) => emailLower.endsWith("@" + domain) || emailLower.endsWith("." + domain)
-    );
-
-    if (!hasValidDomain) {
+    try {
+      validateUniversityEmailOrThrow(emailLower);
+    } catch (err) {
       throw ApiError.badRequest("Use your university email address");
     }
 

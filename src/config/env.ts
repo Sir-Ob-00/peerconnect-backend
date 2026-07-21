@@ -11,6 +11,7 @@ loadDotenv();
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
+  HOST: z.string().optional(),
   API_VERSION: z.string().default("v1"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("*"),
@@ -21,7 +22,7 @@ const envSchema = z.object({
   // Auth
   JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
   JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),
-  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("24h"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
   JWT_REFRESH_EXPIRES_IN_MS: z.coerce.number().int().positive().default(7 * 24 * 60 * 60 * 1000),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),

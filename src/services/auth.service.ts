@@ -390,14 +390,13 @@ export const authService = {
       throw ApiError.unauthorized(INVALID_CREDENTIALS_MESSAGE);
     }
 
-    // Role & verification checks for mobile
+    // Role check for mobile
     if (user.role !== "STUDENT") {
       throw ApiError.forbidden("Only student accounts may log in to the mobile app.");
     }
 
-    if (!user.isEmailVerified || !user.studentVerified) {
-      // If studentVerified is false but email verified true, they may be in "profile" or "pending" states.
-      throw ApiError.forbidden("Student account not fully verified. Complete email and ID verification before accessing the app.");
+    if (user.setupProgress === "email_verification") {
+      throw ApiError.forbidden("Please verify your email address before logging in.");
     }
 
     assertAccountIsUsable(user);
