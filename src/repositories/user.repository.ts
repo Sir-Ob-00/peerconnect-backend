@@ -44,4 +44,36 @@ export const userRepository = {
       data: { deletedAt: new Date(), accountStatus: "INACTIVE" },
     });
   },
+
+  async findMany(filters: {
+    search?: string;
+    role?: string;
+    verificationStatus?: string;
+    accountStatus?: string;
+    skip?: number;
+    take?: number;
+  }): Promise<{ items: User[]; totalItems: number }> {
+    const where: Prisma.UserWhereInput = {};
+    if (filters.search) {
+      where.OR = [
+        { firstName: { contains: filters.search, mode: "insensitive" } },
+        { lastName: { contains: filters.search, mode: "insensitive" } },
+        { email: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+    if (filters.role) where.role = filters.role as any;
+    if (filters.verificationStatus) where.verificationStatus = filters.verificationStatus;
+    if (filters.accountStatus) where.accountStatus = filters.accountStatus as any;
+
+    const [items, totalItems] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 10,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.count({ where }),
+    ]);
+    return { items, totalItems };
+  },
 };

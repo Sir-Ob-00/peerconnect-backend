@@ -1,4 +1,4 @@
-import type { Review, User } from "@prisma/client";
+import type { Prisma, Review, User } from "@prisma/client";
 import { prisma } from "../config/database";
 
 const reviewerSelect = {
@@ -72,5 +72,35 @@ export const reviewRepository = {
       averageRating: result._avg.rating ?? 0,
       totalReviews: result._count.rating,
     };
+  },
+
+  async findMany(filters: {
+    reviewerId?: string;
+    receiverId?: string;
+    minRating?: number;
+    maxRating?: number;
+    skip?: number;
+    take?: number;
+  }): Promise<ListResult> {
+    const where: Prisma.ReviewWhereInput = {};
+    if (filters.reviewerId) where.reviewerId = filters.reviewerId;
+    if (filters.receiverId) where.receiverId = filters.receiverId;
+    if (filters.minRating !== undefined || filters.maxRating !== undefined) {
+      where.rating = {};
+      if (filters.minRating !== undefined) where.rating.gte = filters.minRating;
+      if (filters.maxRating !== undefined) where.rating.lte = filters.maxRating;
+    }
+
+    const [items, totalItems] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        include: { reviewer: { select: reviewerSelect } },
+        orderBy: { createdAt: "desc" },
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 10,
+      }),
+      prisma.review.count({ where }),
+    ]);
+    return { items, totalItems };
   },
 };

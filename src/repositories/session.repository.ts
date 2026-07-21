@@ -74,4 +74,31 @@ export const sessionRepository = {
       include: { requester: { select: participantSelect }, receiver: { select: participantSelect } },
     });
   },
+
+  async findMany(filters: {
+    status?: string;
+    requesterId?: string;
+    receiverId?: string;
+    skill?: string;
+    skip?: number;
+    take?: number;
+  }): Promise<ListResult> {
+    const where: Prisma.SessionWhereInput = {};
+    if (filters.status) where.status = filters.status as any;
+    if (filters.requesterId) where.requesterId = filters.requesterId;
+    if (filters.receiverId) where.receiverId = filters.receiverId;
+    if (filters.skill) where.skill = { contains: filters.skill, mode: "insensitive" };
+
+    const [items, totalItems] = await Promise.all([
+      prisma.session.findMany({
+        where,
+        include: { requester: { select: participantSelect }, receiver: { select: participantSelect } },
+        orderBy: { createdAt: "desc" },
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 10,
+      }),
+      prisma.session.count({ where }),
+    ]);
+    return { items, totalItems };
+  },
 };

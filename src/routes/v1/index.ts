@@ -11,6 +11,10 @@ import { notificationRouter } from "./notification.routes";
 import { mobileAuthRouter } from "./mobileAuth.routes";
 import { adminAuthRouter } from "./adminAuth.routes";
 import { adminVerificationsRouter } from "./adminVerifications.routes";
+import { adminStudentsRouter } from "./adminStudents.routes";
+import { adminSessionsRouter } from "./adminSessions.routes";
+import { adminReviewsRouter } from "./adminReviews.routes";
+import { adminStatsRouter } from "./adminStats.routes";
 import { frontendAuthRouter } from "./frontendAuth.routes";
 
 export const v1Router = Router();
@@ -23,6 +27,10 @@ v1Router.use("/mobile", mobileAuthRouter);
 // Admin namespace
 v1Router.use("/admin", adminAuthRouter);
 v1Router.use("/admin", adminVerificationsRouter);
+v1Router.use("/admin", adminStudentsRouter);
+v1Router.use("/admin", adminSessionsRouter);
+v1Router.use("/admin", adminReviewsRouter);
+v1Router.use("/admin", adminStatsRouter);
 // Keep existing authRouter for backward compatibility (legacy clients)
 v1Router.use(authRouter);
 v1Router.use(userRouter);
