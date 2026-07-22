@@ -4,6 +4,7 @@ import { sendSuccess } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
+import { emitToUser } from "../sockets/socketEmitter";
 
 export const adminVerificationsController = {
   listPending: asyncHandler(async (req: Request, res: Response) => {
@@ -62,6 +63,8 @@ export const adminVerificationsController = {
       adminNotes: notes,
     } as any);
 
+    emitToUser(userId, "verification:approved", { verificationStatus: "approved", setupProgress: "complete" });
+
     sendSuccess(res, { message: "Student verification approved" });
   }),
 
@@ -78,6 +81,8 @@ export const adminVerificationsController = {
       adminNotes: notes,
     } as any);
 
+    emitToUser(userId, "verification:rejected", { verificationStatus: "rejected" });
+
     sendSuccess(res, { message: "Student verification rejected" });
   }),
 
@@ -93,6 +98,8 @@ export const adminVerificationsController = {
       setupProgress: "pending_approval",
       adminNotes: notes,
     } as any);
+
+    emitToUser(userId, "verification:in_review", { verificationStatus: "pending_approval", setupProgress: "pending_approval" });
 
     sendSuccess(res, { message: "Student verification set to in-review" });
   }),
