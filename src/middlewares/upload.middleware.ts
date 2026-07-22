@@ -30,3 +30,9 @@ export const uploadChatImage = multer({
   limits: { fileSize: env.MAX_CHAT_IMAGE_SIZE_MB * 1024 * 1024, files: 1 },
   fileFilter,
 }).single("image");
+
+export const uploadIdPhoto = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: env.MAX_ID_PHOTO_SIZE_MB * 1024 * 1024, files: 1 },
+  fileFilter,
+}).single("idPhoto");

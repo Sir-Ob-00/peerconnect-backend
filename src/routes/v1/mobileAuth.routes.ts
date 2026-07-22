@@ -2,11 +2,11 @@ import { Router } from "express";
 import { mobileAuthController } from "../../controllers/mobileAuth.controller";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { authenticate } from "../../middlewares/authenticate";
+import { uploadIdPhoto } from "../../middlewares/upload.middleware";
 import {
   mobileRegisterSchema,
   mobileVerifySchema,
   resendOtpSchema,
-  submitIdSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -42,7 +42,7 @@ mobileAuthRouter.post("/auth/reset-password", validateRequest({ body: resetPassw
 mobileAuthRouter.post("/auth/logout", validateRequest({ body: logoutSchema }), mobileAuthController.logout);
 
 // POST /mobile/auth/submit-id
-mobileAuthRouter.post("/auth/submit-id", authenticate, validateRequest({ body: submitIdSchema }), mobileAuthController.submitId);
+mobileAuthRouter.post("/auth/submit-id", authenticate, uploadIdPhoto, mobileAuthController.submitId);
 
 // GET /mobile/auth/me
 mobileAuthRouter.get("/auth/me", authenticate, mobileAuthController.me);

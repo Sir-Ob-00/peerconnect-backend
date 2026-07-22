@@ -47,6 +47,8 @@ const envSchema = z.object({
   MAX_PROFILE_PHOTO_SIZE_MB: z.coerce.number().positive().default(5),
   CLOUDINARY_CHAT_UPLOAD_FOLDER: z.string().default("peerconnect/chat-images"),
   MAX_CHAT_IMAGE_SIZE_MB: z.coerce.number().positive().default(5),
+  CLOUDINARY_ID_UPLOAD_FOLDER: z.string().default("peerconnect/id-verifications"),
+  MAX_ID_PHOTO_SIZE_MB: z.coerce.number().positive().default(5),
 
   // Email (Phase 8 — Nodemailer)
   SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),

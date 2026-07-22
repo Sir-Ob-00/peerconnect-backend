@@ -6,6 +6,7 @@
 import { Router } from "express";
 import { frontendAuthController } from "../../controllers/frontendAuth.controller";
 import { authenticate } from "../../middlewares/authenticate";
+import { uploadProfilePhoto, uploadIdPhoto } from "../../middlewares/upload.middleware";
 import { ApiError } from "../../utils/ApiError";
 import type { NextFunction, Request, Response } from "express";
 
@@ -51,13 +52,13 @@ frontendAuthRouter.post("/auth/logout", authenticate, frontendAuthController.log
  * 7. PUT /auth/profile
  * Save profile/university/skills + advance setupProgress
  */
-frontendAuthRouter.put("/auth/profile", authenticate, frontendAuthController.saveProfile);
+frontendAuthRouter.put("/auth/profile", authenticate, uploadProfilePhoto, frontendAuthController.saveProfile);
 
 /**
  * 8. POST /auth/verify-id
  * Submit student ID photo + advance setupProgress
  */
-frontendAuthRouter.post("/auth/verify-id", authenticate, frontendAuthController.verifyId);
+frontendAuthRouter.post("/auth/verify-id", authenticate, uploadIdPhoto, frontendAuthController.verifyId);
 
 /**
  * 9. POST /auth/forgot-password

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { authService } from "../services/auth.service";
 import { sendSuccess } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
+import { uploadIdPhotoBuffer } from "../utils/cloudinaryUpload.util";
 
 export const mobileAuthController = {
   register: asyncHandler(async (req: Request, res: Response) => {
@@ -46,8 +47,12 @@ export const mobileAuthController = {
 
   submitId: asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw new Error("Authentication required.");
-    const { photoUrl } = req.body as { photoUrl: string };
-    await authService.submitIdVerification(req.user.id, photoUrl);
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) {
+      throw new Error("ID photo file is required. Attach one under the 'idPhoto' field.");
+    }
+    const uploaded = await uploadIdPhotoBuffer(file.buffer, `id_${req.user.id}`);
+    await authService.submitIdVerification(req.user.id, uploaded.secureUrl);
     sendSuccess(res, { message: "ID submitted successfully. Your account is pending review." });
   }),
 

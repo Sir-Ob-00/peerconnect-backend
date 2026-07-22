@@ -12,6 +12,7 @@ import { onlineUsersRegistry } from "../sockets/onlineUsers.registry";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { validateUniversityEmailOrThrow } from "../utils/email.util";
+import { uploadIdPhotoBuffer, uploadImageBuffer } from "../utils/cloudinaryUpload.util";
 
 function buildFrontendUser(user: any, profile: any = {}) {
   return {
@@ -202,8 +203,11 @@ export const frontendAuthController = {
       learningInterests,
       availability,
       bio,
-      avatarUrl,
     } = req.body;
+
+    if (!university || typeof university !== "string") {
+      throw ApiError.badRequest("University is required");
+    }
 
     if (!department || typeof department !== "string") {
       throw ApiError.badRequest("Department is required");
@@ -217,12 +221,16 @@ export const frontendAuthController = {
       throw ApiError.badRequest("At least one skill is required");
     }
 
+    if (!Array.isArray(learningInterests) || learningInterests.length === 0) {
+      throw ApiError.badRequest("At least one learning interest is required");
+    }
+
     if (!availability || typeof availability !== "string") {
       throw ApiError.badRequest("Availability is required");
     }
 
     const updatedProfile = await studentProfileService.updateMyProfile(req.user.id, {
-      university: university || "",
+      university,
       department,
       level,
       skills,
@@ -231,8 +239,12 @@ export const frontendAuthController = {
       bio: bio || "",
     });
 
-    if (avatarUrl) {
-      await authService.updateUser(req.user.id, { profileImage: avatarUrl });
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (file) {
+      const uploaded = await uploadImageBuffer(file.buffer, `user_${req.user.id}`);
+      await authService.updateUser(req.user.id, { profileImage: uploaded.secureUrl });
+    } else if (req.body.avatarUrl) {
+      await authService.updateUser(req.user.id, { profileImage: req.body.avatarUrl });
     }
 
     const user = await authService.getMe(req.user.id);
@@ -246,13 +258,14 @@ export const frontendAuthController = {
       throw ApiError.unauthorized("Unauthorized");
     }
 
-    const { idPhotoUrl } = req.body;
+    const file = (req as any).file as Express.Multer.File | undefined;
 
-    if (!idPhotoUrl || typeof idPhotoUrl !== "string") {
-      throw ApiError.badRequest("Valid image URL is required");
+    if (!file) {
+      throw ApiError.badRequest("ID photo file is required. Attach one under the 'idPhoto' field.");
     }
 
-    const updatedUser = await authService.submitIdVerification(req.user.id, idPhotoUrl);
+    const uploaded = await uploadIdPhotoBuffer(file.buffer, `id_${req.user.id}`);
+    const updatedUser = await authService.submitIdVerification(req.user.id, uploaded.secureUrl);
     const profile = await studentProfileRepository.findByUserId(req.user.id);
     const formatted = buildFrontendUser(updatedUser, profile);
 

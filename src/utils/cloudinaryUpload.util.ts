@@ -40,6 +40,28 @@ export function uploadImageBuffer(buffer: Buffer, publicId: string): Promise<Upl
   });
 }
 
+export function uploadIdPhotoBuffer(buffer: Buffer, publicId: string): Promise<UploadedImage> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: env.CLOUDINARY_ID_UPLOAD_FOLDER,
+        public_id: publicId,
+        resource_type: "image",
+        overwrite: true,
+        transformation: [{ width: 800, height: 600, crop: "limit" }],
+      },
+      (error, result) => {
+        if (error || !result) {
+          return reject(error ?? new Error("Cloudinary upload failed with no result."));
+        }
+        resolve({ secureUrl: result.secure_url, publicId: result.public_id });
+      }
+    );
+
+    Readable.from(buffer).pipe(uploadStream);
+  });
+}
+
 /**
  * Uploads a chat image. Separate from `uploadImageBuffer` (profile photos)
  * on purpose: a different folder, a random per-upload public id (Cloudinary
