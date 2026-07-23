@@ -3,7 +3,6 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { sendSuccess } from "../utils/ApiResponse";
 import { prisma } from "../config/database";
 import { userRepository } from "../repositories/user.repository";
-import { sessionRepository } from "../repositories/session.repository";
 import { reviewRepository } from "../repositories/review.repository";
 
 export const adminStatsController = {
@@ -20,7 +19,7 @@ export const adminStatsController = {
       prisma.user.count({ where: { role: "STUDENT", deletedAt: null } }),
       prisma.session.count(),
       prisma.review.count(),
-      userRepository.findByVerificationStatus("pending").then((users) => users.length),
+      userRepository.findByVerificationStatus("pending_approval").then((users) => users.length),
       prisma.session.groupBy({
         by: ["status"],
         _count: { status: true },

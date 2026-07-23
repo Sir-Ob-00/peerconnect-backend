@@ -14,6 +14,13 @@ export type StudentProfileWritableData = Partial<
     | "isAvailable"
     | "profilePhoto"
     | "studentId"
+    | "programme"
+    | "universityId"
+    | "departmentId"
+    | "levelId"
+    | "programmeId"
+    | "wantsToLearnCourses"
+    | "wantsToLearnSkills"
   >
 >;
 

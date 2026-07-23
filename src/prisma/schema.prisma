@@ -68,6 +68,10 @@ model User {
   createdChatRooms    ChatRoom[]
   chatMemberships     ChatMember[]
   chatMessages        ChatMessage[]
+  studentCourses      StudentCourse[]
+  studentSkills       StudentSkill[]
+  studentLearningInterests StudentLearningInterest[]
+  availabilities      Availability[]
 
   @@map("users")
 }
@@ -95,9 +99,18 @@ model StudentProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  university         String?
-  department        String?
-  level             String?
+  university     String?
+  universityId   String?
+
+  department     String?
+  departmentId   String?
+
+  level          String?
+  levelId        String?
+
+  programme      String?
+  programmeId    String?
+
   skills            String[] @default([])
   learningInterests String[] @default([])
   bio               String?
@@ -105,6 +118,8 @@ model StudentProfile {
   isAvailable       Boolean  @default(true)
   profilePhoto      String?
   studentId         String?
+  wantsToLearnCourses Boolean @default(false)
+  wantsToLearnSkills  Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -383,4 +398,199 @@ model ChatMessage {
   @@index([chatRoomId, createdAt])
   @@index([senderId])
   @@map("chat_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 9 — Student Onboarding & Learning Context
+// ---------------------------------------------------------------------------
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum StudentItemType {
+  LEARNING
+  HELP
+}
+
+model University {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  departments Department[]
+  programmes  Programme[]
+  courses     Course[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("universities")
+}
+
+model Department {
+  id          String    @id @default(uuid())
+  name        String
+  code        String?
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  programmes  Programme[]
+  courses     Course[]
+  custom      Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([universityId, name])
+  @@map("departments")
+}
+
+model Programme {
+  id          String    @id @default(uuid())
+  name        String
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  custom      Boolean   @default(false)
+  courses     Course[]
+  skills      Skill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([universityId, departmentId, name])
+  @@map("programmes")
+}
+
+model Level {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  courses     Course[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("levels")
+}
+
+model Course {
+  id           String    @id @default(uuid())
+  name         String
+  code         String?
+  universityId String
+  university    University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department    Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  levelId      String?
+  level        Level? @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  programmeId  String?
+  programme    Programme? @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  custom       Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  studentCourses StudentCourse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([universityId, departmentId, name])
+  @@map("courses")
+}
+
+model Skill {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String?
+  programmeId String?
+  programme   Programme? @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  isActive    Boolean  @default(true)
+  studentSkills StudentSkill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("skills")
+}
+
+model LearningInterest {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  studentLearningInterests StudentLearningInterest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("learning_interests")
+}
+
+model Availability {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek   DayOfWeek
+  startTime   String
+  endTime     String
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("availabilities")
+}
+
+model StudentCourse {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  type      StudentItemType @default(LEARNING)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId, type])
+  @@index([userId])
+  @@map("student_courses")
+}
+
+model StudentSkill {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId   String
+  skill     Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  type      StudentItemType @default(LEARNING)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, skillId, type])
+  @@index([userId])
+  @@map("student_skills")
+}
+
+model StudentLearningInterest {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interestId  String
+  interest    LearningInterest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, interestId])
+  @@index([userId])
+  @@map("student_learning_interests")
 }

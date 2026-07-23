@@ -1,5 +1,4 @@
 import { prisma } from "../config/database";
-import type { ChatMember } from "@prisma/client";
 
 export const chatMemberRepository = {
   addMember(chatRoomId: string, userId: string, role: "ADMIN" | "MEMBER" = "MEMBER") {
@@ -10,15 +9,22 @@ export const chatMemberRepository = {
     return prisma.chatMember.deleteMany({ where: { chatRoomId, userId } });
   },
 
-  findMember(chatRoomId: string, userId: string): Promise<ChatMember | null> {
+  findMember(chatRoomId: string, userId: string) {
     return prisma.chatMember.findUnique({ where: { chatRoomId_userId: { chatRoomId, userId } } as any });
   },
 
-  listMembers(chatRoomId: string): Promise<ChatMember[]> {
-    return prisma.chatMember.findMany({ where: { chatRoomId }, include: { user: { select: { id: true, firstName: true, lastName: true, profileImage: true } } } as any });
+  listMembers(chatRoomId: string) {
+    return prisma.chatMember.findMany({
+      where: { chatRoomId },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, profileImage: true },
+        },
+      },
+    } as any);
   },
 
-  countAdmins(chatRoomId: string): Promise<number> {
+  countAdmins(chatRoomId: string) {
     return prisma.chatMember.count({ where: { chatRoomId, role: "ADMIN" } });
   },
 };

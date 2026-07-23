@@ -9,6 +9,7 @@ import { chatRouter } from "./chat.routes";
 import { reviewRouter } from "./review.routes";
 import { notificationRouter } from "./notification.routes";
 import { mobileAuthRouter } from "./mobileAuth.routes";
+import { onboardingRouter } from "./onboarding.routes";
 import { adminAuthRouter } from "./adminAuth.routes";
 import { adminVerificationsRouter } from "./adminVerifications.routes";
 import { adminStudentsRouter } from "./adminStudents.routes";
@@ -24,6 +25,7 @@ v1Router.use(healthRouter);
 v1Router.use(frontendAuthRouter);
 // Mount mobile-specific routes under /mobile
 v1Router.use("/mobile", mobileAuthRouter);
+v1Router.use("/mobile", onboardingRouter);
 // Admin namespace
 v1Router.use("/admin", adminAuthRouter);
 v1Router.use("/admin", adminVerificationsRouter);

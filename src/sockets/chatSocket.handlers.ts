@@ -175,7 +175,7 @@ export function registerChatHandlers(io: Server, socket: Socket): void {
       io.to(SOCKET_CONSTANTS.chatRoom(chatId)).emit("new_group_message", eventBody);
 
       // also emit a lightweight notification to each member's personal room
-      const members = await chatService.listGroupsForUser(userId); // this returns rooms current user is in; not ideal but keep simple
+      await chatService.listGroupsForUser(userId); // unused but kept for potential future expansion
       io.to(SOCKET_CONSTANTS.userRoom(userId)).emit("message:sent", eventBody);
 
       // global notification event for push/in-app
