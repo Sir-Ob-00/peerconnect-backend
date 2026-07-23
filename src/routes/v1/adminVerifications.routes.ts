@@ -20,7 +20,14 @@ adminVerificationsRouter.get(
   adminVerificationsController.listPending
 );
 
-// PATCH /admin/verifications/:userId/approve
+adminVerificationsRouter.get(
+  "/verifications/:userId",
+  authenticate,
+  requireAdmin,
+  validateRequest({ params: userIdParamSchema }),
+  adminVerificationsController.getVerificationDetail
+);
+
 adminVerificationsRouter.patch(
   "/verifications/:userId/approve",
   authenticate,

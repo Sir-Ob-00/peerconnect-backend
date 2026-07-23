@@ -4,6 +4,7 @@ import { sendSuccess } from "../utils/ApiResponse";
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
 import { ApiError } from "../utils/ApiError";
+import { prisma } from "../config/database";
 import type { AdminStudentsQuery } from "../validators/admin.validator";
 
 export const adminStudentsController = {
@@ -25,6 +26,29 @@ export const adminStudentsController = {
     const rows = await Promise.all(
       items.map(async (u) => {
         const profile = await studentProfileRepository.findByUserId(u.id);
+
+        let universityName: string | null = null;
+        let departmentName: string | null = null;
+        let programmeName: string | null = null;
+        let levelName: string | null = null;
+
+        if (profile?.universityId) {
+          const university = await prisma.university.findUnique({ where: { id: profile.universityId } });
+          universityName = university?.name ?? null;
+        }
+        if (profile?.departmentId) {
+          const department = await prisma.department.findUnique({ where: { id: profile.departmentId } });
+          departmentName = department?.name ?? null;
+        }
+        if (profile?.programmeId) {
+          const programme = await prisma.programme.findUnique({ where: { id: profile.programmeId } });
+          programmeName = programme?.name ?? null;
+        }
+        if (profile?.levelId) {
+          const level = await prisma.level.findUnique({ where: { id: profile.levelId } });
+          levelName = level?.name ?? null;
+        }
+
         return {
           id: u.id,
           firstName: u.firstName,
@@ -38,15 +62,24 @@ export const adminStudentsController = {
           setupProgress: u.setupProgress,
           createdAt: u.createdAt,
           updatedAt: u.updatedAt,
+          academicProfile: {
+            university: universityName,
+            department: departmentName,
+            programme: programmeName,
+            level: levelName,
+          },
           profile: profile
             ? {
                 university: profile.university,
                 department: profile.department,
                 level: profile.level,
+                programme: profile.programme,
                 skills: profile.skills,
                 learningInterests: profile.learningInterests,
                 isAvailable: profile.isAvailable,
                 studentId: profile.studentId,
+                wantsToLearnCourses: profile.wantsToLearnCourses,
+                wantsToLearnSkills: profile.wantsToLearnSkills,
               }
             : null,
         };
@@ -74,6 +107,62 @@ export const adminStudentsController = {
 
     const profile = await studentProfileRepository.findByUserId(user.id);
 
+    let universityName: string | null = null;
+    let departmentName: string | null = null;
+    let programmeName: string | null = null;
+    let levelName: string | null = null;
+
+    if (profile?.universityId) {
+      const university = await prisma.university.findUnique({ where: { id: profile.universityId } });
+      universityName = university?.name ?? null;
+    }
+    if (profile?.departmentId) {
+      const department = await prisma.department.findUnique({ where: { id: profile.departmentId } });
+      departmentName = department?.name ?? null;
+    }
+    if (profile?.programmeId) {
+      const programme = await prisma.programme.findUnique({ where: { id: profile.programmeId } });
+      programmeName = programme?.name ?? null;
+    }
+    if (profile?.levelId) {
+      const level = await prisma.level.findUnique({ where: { id: profile.levelId } });
+      levelName = level?.name ?? null;
+    }
+
+    const [
+      learningCourses,
+      learningSkills,
+      helpCourses,
+      helpSkills,
+      interests,
+      availabilitySlots,
+    ] = await Promise.all([
+      prisma.studentCourse.findMany({
+        where: { userId: user.id, type: "LEARNING" },
+        include: { course: true },
+      }),
+      prisma.studentSkill.findMany({
+        where: { userId: user.id, type: "LEARNING" },
+        include: { skill: true },
+      }),
+      prisma.studentCourse.findMany({
+        where: { userId: user.id, type: "HELP" },
+        include: { course: true },
+      }),
+      prisma.studentSkill.findMany({
+        where: { userId: user.id, type: "HELP" },
+        include: { skill: true },
+      }),
+      prisma.studentLearningInterest.findMany({
+        where: { userId: user.id },
+        include: { interest: true },
+      }),
+      prisma.availability.findMany({
+        where: { userId: user.id },
+        orderBy: { dayOfWeek: "asc" },
+      }),
+    ]);
+
     sendSuccess(res, {
       message: "Student retrieved.",
       data: {
@@ -90,20 +179,52 @@ export const adminStudentsController = {
         setupProgress: user.setupProgress,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        profile: profile
-          ? {
-              university: profile.university,
-              department: profile.department,
-              level: profile.level,
-              skills: profile.skills,
-              learningInterests: profile.learningInterests,
-              bio: profile.bio,
-              availability: profile.availability,
-              isAvailable: profile.isAvailable,
-              profilePhoto: profile.profilePhoto,
-              studentId: profile.studentId,
-            }
-          : null,
+        academicProfile: {
+          university: universityName,
+          department: departmentName,
+          programme: programmeName,
+          level: levelName,
+        },
+        learningGoals: {
+          courses: learningCourses.map((lc) => ({
+            id: lc.course.id,
+            name: lc.course.name,
+            code: lc.course.code,
+          })),
+          skills: learningSkills.map((ls) => ({
+            id: ls.skill.id,
+            name: ls.skill.name,
+          })),
+        },
+        canHelpWith: {
+          courses: helpCourses.map((hc) => ({
+            id: hc.course.id,
+            name: hc.course.name,
+            code: hc.course.code,
+          })),
+          skills: helpSkills.map((hs) => ({
+            id: hs.skill.id,
+            name: hs.skill.name,
+          })),
+        },
+        learningInterests: interests.map((li) => ({
+          id: li.interest.id,
+          name: li.interest.name,
+          description: li.interest.description,
+        })),
+        availability: availabilitySlots.map((a) => ({
+          id: a.id,
+          dayOfWeek: a.dayOfWeek,
+          startTime: a.startTime,
+          endTime: a.endTime,
+        })),
+        bio: profile?.bio ?? null,
+        idVerification: {
+          idPhotoUrl: user.idPhotoUrl,
+          status: user.verificationStatus,
+          submittedAt: user.updatedAt,
+          rejectionReason: user.adminNotes,
+        },
       },
     });
   }),
