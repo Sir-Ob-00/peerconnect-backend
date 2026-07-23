@@ -17,14 +17,14 @@ import {
 
 export const onboardingRouter = Router();
 
+onboardingRouter.get("/universities", onboardingController.getUniversities);
+onboardingRouter.get("/departments", onboardingController.getDepartments);
+onboardingRouter.get("/levels", onboardingController.getLevels);
+onboardingRouter.get("/programmes", onboardingController.getProgrammes);
+
 onboardingRouter.use(authenticate);
 
 onboardingRouter.get("/profile", onboardingController.getAcademicProfile);
-onboardingRouter.get("/universities", onboardingController.getUniversities);
-onboardingRouter.get("/departments", onboardingController.getDepartments);
-onboardingRouter.post("/departments/custom", onboardingController.createCustomDepartment);
-onboardingRouter.get("/levels", onboardingController.getLevels);
-onboardingRouter.get("/programmes", onboardingController.getProgrammes);
 onboardingRouter.patch("/profile/academic", validateRequest({ body: updateAcademicProfileSchema }), onboardingController.updateAcademicProfile);
 onboardingRouter.patch("/profile/photo", uploadProfilePhoto, onboardingController.uploadProfilePhoto);
 

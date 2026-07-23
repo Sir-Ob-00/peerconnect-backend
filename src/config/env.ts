@@ -16,7 +16,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CORS_ORIGIN: z.string().default("*"),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
-  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(500),
   LOG_LEVEL: z.enum(["error", "warn", "info", "http", "debug"]).default("debug"),
 
   // Auth
@@ -37,7 +37,7 @@ const envSchema = z.object({
 
   // Login-specific rate limiting (brute-force protection)
   LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
-  LOGIN_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
+  LOGIN_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(50),
 
   // Cloudinary (Phase 3 — profile photo upload)
   CLOUDINARY_CLOUD_NAME: z.string().min(1, "CLOUDINARY_CLOUD_NAME is required"),
