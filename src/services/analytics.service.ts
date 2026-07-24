@@ -88,4 +88,44 @@ export const analyticsService = {
       },
     };
   },
+
+  async getRegistrationTrend() {
+    const now = new Date();
+    const weeks: { week: string; count: number }[] = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - i * 7);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      const count = await userRepository.count({
+        role: "STUDENT",
+        createdAt: { gte: weekStart, lt: weekEnd },
+      });
+      weeks.push({ week: weekStart.toISOString().split("T")[0], count });
+    }
+
+    return { data: weeks };
+  },
+
+  async getUniversityDistribution() {
+    const profiles = await prisma.studentProfile.findMany({
+      where: { university: { not: null } },
+      select: { university: true },
+    });
+
+    const distribution: Record<string, number> = {};
+    for (const profile of profiles) {
+      const uni = profile.university!;
+      distribution[uni] = (distribution[uni] ?? 0) + 1;
+    }
+
+    const sorted = Object.entries(distribution)
+      .sort((a, b) => b[1] - a[1])
+      .map(([university, count]) => ({ university, count }));
+
+    return { data: sorted };
+  },
 };

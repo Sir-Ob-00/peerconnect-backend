@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { onboardingController } from "../../controllers/onboarding.controller";
+import { studentProfileController } from "../../controllers/studentProfile.controller";
 import { authenticate } from "../../middlewares/authenticate";
 import { uploadProfilePhoto } from "../../middlewares/upload.middleware";
 import { validateRequest } from "../../middlewares/validateRequest";
@@ -25,6 +26,7 @@ onboardingRouter.get("/programmes", onboardingController.getProgrammes);
 
 onboardingRouter.use(authenticate);
 
+onboardingRouter.get("/profile/stats", studentProfileController.getStats);
 onboardingRouter.get("/profile", onboardingController.getAcademicProfile);
 onboardingRouter.patch("/profile/academic", validateRequest({ body: updateAcademicProfileSchema }), onboardingController.updateAcademicProfile);
 onboardingRouter.patch("/profile/photo", uploadProfilePhoto, onboardingController.uploadProfilePhoto);

@@ -15,10 +15,10 @@ export interface RefreshTokenPayload {
   type: "refresh";
 }
 
-export function signAccessToken(payload: { userId: string; role: Role }): string {
+export function signAccessToken(payload: { userId: string; role: Role }, expiresIn?: string): string {
   const body: AccessTokenPayload = { sub: payload.userId, role: payload.role, type: "access" };
   return jwt.sign(body, env.JWT_ACCESS_SECRET, {
-    expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+    expiresIn: expiresIn ?? env.JWT_ACCESS_EXPIRES_IN,
   } as SignOptions);
 }
 

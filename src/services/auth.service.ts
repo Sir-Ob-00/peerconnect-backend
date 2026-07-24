@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { User } from "@prisma/client";
 import { userRepository } from "../repositories/user.repository";
+import { studentProfileRepository } from "../repositories/studentProfile.repository";
 import { refreshTokenRepository } from "../repositories/refreshToken.repository";
 import { passwordResetTokenRepository } from "../repositories/passwordResetToken.repository";
 import { emailVerificationTokenRepository } from "../repositories/emailVerificationToken.repository";
@@ -42,7 +43,7 @@ function assertAccountIsUsable(user: User): void {
 }
 
 /** Issues a fresh access + refresh token pair and persists the refresh token's hash for later verification/revocation. */
-async function issueTokens(user: User): Promise<AuthTokens> {
+async function issueTokens(user: User, accessTokenExpiresIn?: string): Promise<AuthTokens> {
   const tokenId = crypto.randomUUID();
   const refreshToken = signRefreshToken({ userId: user.id, tokenId });
 
@@ -53,7 +54,7 @@ async function issueTokens(user: User): Promise<AuthTokens> {
     expiresAt: new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN_MS),
   });
 
-  const accessToken = signAccessToken({ userId: user.id, role: user.role });
+  const accessToken = signAccessToken({ userId: user.id, role: user.role }, accessTokenExpiresIn);
   return { accessToken, refreshToken };
 }
 
@@ -215,12 +216,20 @@ export const authService = {
     await refreshTokenRepository.revokeAllForUser(user.id);
   },
 
-  async getMe(userId: string): Promise<PublicUser> {
+  async getMe(userId: string): Promise<PublicUser & { university?: string | null; department?: string | null; programme?: string | null; level?: string | null; avatarUrl?: string | null }> {
     const user = await userRepository.findActiveById(userId);
     if (!user) {
       throw ApiError.notFound("User not found.");
     }
-    return toPublicUser(user);
+    const profile = await studentProfileRepository.findByUserId(userId);
+    return {
+      ...toPublicUser(user),
+      university: profile?.university ?? null,
+      department: profile?.department ?? null,
+      programme: profile?.programme ?? null,
+      level: profile?.level ?? null,
+      avatarUrl: profile?.profilePhoto ?? null,
+    };
   },
 
   // --- Mobile-specific registration + email OTP verification ---
@@ -375,7 +384,7 @@ export const authService = {
     }
 
     assertAccountIsUsable(user);
-    const tokens = await issueTokens(user);
+    const tokens = await issueTokens(user, env.JWT_ADMIN_ACCESS_EXPIRES_IN);
     return { user: toPublicUser(user), ...tokens };
   },
 

@@ -29,4 +29,10 @@ export const studentProfileController = {
     const profile = await studentProfileService.getPublicProfile(req.params.id);
     sendSuccess(res, { message: "Student profile retrieved successfully.", data: profile });
   }),
+
+  getStats: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized("Authentication required.");
+    const stats = await studentProfileService.getStats(req.user.id);
+    sendSuccess(res, { message: "Profile stats retrieved.", data: stats });
+  }),
 };

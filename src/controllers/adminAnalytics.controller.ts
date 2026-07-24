@@ -25,4 +25,14 @@ export const adminAnalyticsController = {
     const data = await analyticsService.getEngagementMetrics();
     sendSuccess(res, { message: "Engagement metrics retrieved.", data: data.data });
   }),
+
+  registrationTrend: asyncHandler(async (_req: Request, res: Response) => {
+    const data = await analyticsService.getRegistrationTrend();
+    sendSuccess(res, { message: "Registration trend retrieved.", data: data.data });
+  }),
+
+  universityDistribution: asyncHandler(async (_req: Request, res: Response) => {
+    const data = await analyticsService.getUniversityDistribution();
+    sendSuccess(res, { message: "University distribution retrieved.", data: data.data });
+  }),
 };

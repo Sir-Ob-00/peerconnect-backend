@@ -35,3 +35,17 @@ adminAnalyticsRouter.get(
   requireAdmin,
   adminAnalyticsController.engagement
 );
+
+adminAnalyticsRouter.get(
+  "/analytics/registrations",
+  authenticate,
+  requireAdmin,
+  adminAnalyticsController.registrationTrend
+);
+
+adminAnalyticsRouter.get(
+  "/analytics/university-distribution",
+  authenticate,
+  requireAdmin,
+  adminAnalyticsController.universityDistribution
+);

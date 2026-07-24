@@ -1,5 +1,8 @@
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
+import { sessionRepository } from "../repositories/session.repository";
+import { reviewRepository } from "../repositories/review.repository";
+import { messageRepository } from "../repositories/message.repository";
 import { uploadImageBuffer } from "../utils/cloudinaryUpload.util";
 import { ApiError } from "../utils/ApiError";
 import { toPublicUser, type PublicUser } from "../dtos/user.dto";
@@ -10,6 +13,14 @@ import {
   type StudentProfileView,
 } from "../dtos/studentProfile.dto";
 import type { UpdateStudentProfileInput } from "../validators/studentProfile.validator";
+
+export interface ProfileStats {
+  sessionsCompleted: number;
+  sessionsTotal: number;
+  averageRating: number;
+  totalReviews: number;
+  totalMessages: number;
+}
 
 export interface MyProfileResult {
   user: PublicUser;
@@ -76,5 +87,27 @@ export const studentProfileService = {
     // a write side effect. A user with no profile yet just renders empty.
     const profile = await studentProfileRepository.findByUserId(userId);
     return toPublicStudentProfile(user, profile);
+  },
+
+  async getStats(userId: string): Promise<ProfileStats> {
+    const [sessionsCompleted, sessionsTotal, ratingSummary, totalMessages] = await Promise.all([
+      sessionRepository.count({
+        OR: [{ requesterId: userId }, { receiverId: userId }],
+        status: "COMPLETED" as any,
+      }),
+      sessionRepository.count({
+        OR: [{ requesterId: userId }, { receiverId: userId }],
+      }),
+      reviewRepository.getRatingSummary(userId),
+      messageRepository.count({ senderId: userId }),
+    ]);
+
+    return {
+      sessionsCompleted,
+      sessionsTotal,
+      averageRating: ratingSummary.averageRating,
+      totalReviews: ratingSummary.totalReviews,
+      totalMessages,
+    };
   },
 };

@@ -36,14 +36,25 @@ jest.mock("../../src/repositories/passwordResetToken.repository", () => ({
   },
 }));
 
+jest.mock("../../src/repositories/studentProfile.repository", () => ({
+  studentProfileRepository: {
+    findByUserId: jest.fn(),
+    getOrCreateByUserId: jest.fn(),
+    updateByUserId: jest.fn(),
+    setProfilePhoto: jest.fn(),
+  },
+}));
+
 import { authService } from "../../src/services/auth.service";
 import { userRepository } from "../../src/repositories/user.repository";
 import { refreshTokenRepository } from "../../src/repositories/refreshToken.repository";
 import { passwordResetTokenRepository } from "../../src/repositories/passwordResetToken.repository";
+import { studentProfileRepository } from "../../src/repositories/studentProfile.repository";
 
 const mockUserRepo = userRepository as jest.Mocked<typeof userRepository>;
 const mockRefreshRepo = refreshTokenRepository as jest.Mocked<typeof refreshTokenRepository>;
 const mockResetRepo = passwordResetTokenRepository as jest.Mocked<typeof passwordResetTokenRepository>;
+const mockProfileRepo = studentProfileRepository as jest.Mocked<typeof studentProfileRepository>;
 
 function makeUser(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -342,6 +353,7 @@ describe("authService.getMe", () => {
 
   it("returns a public user without the password field", async () => {
     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+    mockProfileRepo.findByUserId.mockResolvedValue(null);
     const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
     expect(result).not.toHaveProperty("password");
     expect(result.email).toBe("ama.mensah@st.university.edu.gh");
