@@ -7,5 +7,13 @@ export const uuidParamSchema = z.object({
 export const userIdParamSchema = z.object({
   userId: z.string().uuid("Must be a valid UUID"),
 });
+export const chatRoomParamSchema = z.object({
+  chatRoomId: z.string().uuid("Must be a valid UUID"),
+});
+export const conversationParamSchema = z.object({
+  conversationId: z.string().uuid("Must be a valid UUID"),
+});
 export type UuidParamInput = z.infer<typeof uuidParamSchema>;
 export type UserIdParamInput = z.infer<typeof userIdParamSchema>;
+export type ChatRoomParamInput = z.infer<typeof chatRoomParamSchema>;
+export type ConversationParamInput = z.infer<typeof conversationParamSchema>;

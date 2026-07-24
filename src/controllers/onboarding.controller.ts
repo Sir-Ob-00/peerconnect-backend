@@ -206,14 +206,24 @@ export const onboardingController = {
 
   addAvailability: asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw ApiError.unauthorized("Authentication required.");
-    const data = await onboardingService.addAvailability(req.user.id, req.body);
+    const body = {
+      ...req.body,
+      startTime: String(req.body.startTime || "").replace(/\0/g, ""),
+      endTime: String(req.body.endTime || "").replace(/\0/g, ""),
+    };
+    const data = await onboardingService.addAvailability(req.user.id, body);
     sendSuccess(res, { message: "Availability slot added.", data });
   }),
 
   updateAvailability: asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw ApiError.unauthorized("Authentication required.");
     const { availabilityId } = req.params as { availabilityId: string };
-    const data = await onboardingService.updateAvailability(req.user.id, availabilityId, req.body);
+    const body = {
+      ...req.body,
+      ...(req.body.startTime ? { startTime: String(req.body.startTime).replace(/\0/g, "") } : {}),
+      ...(req.body.endTime ? { endTime: String(req.body.endTime).replace(/\0/g, "") } : {}),
+    };
+    const data = await onboardingService.updateAvailability(req.user.id, availabilityId, body);
     sendSuccess(res, { message: "Availability slot updated.", data });
   }),
 

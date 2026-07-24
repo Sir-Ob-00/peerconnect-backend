@@ -3,7 +3,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { authService } from "../../services/auth.service";
 import { sendSuccess } from "../../utils/ApiResponse";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { loginSchema } from "../../validators/auth.validator";
+import { loginSchema, refreshTokenSchema } from "../../validators/auth.validator";
 import { authenticate, requireAdmin } from "../../middlewares/authenticate";
 import { loginRateLimiter } from "../../middlewares/loginRateLimiter";
 
@@ -17,6 +17,16 @@ adminAuthRouter.post(
   asyncHandler(async (req, res) => {
     const result = await authService.loginAdmin(req.body);
     sendSuccess(res, { message: "Admin login successful.", data: result });
+  })
+);
+
+// POST /admin/auth/refresh
+adminAuthRouter.post(
+  "/auth/refresh",
+  validateRequest({ body: refreshTokenSchema }),
+  asyncHandler(async (req, res) => {
+    const tokens = await authService.refresh(req.body.refreshToken);
+    sendSuccess(res, { message: "Access token refreshed successfully.", data: tokens });
   })
 );
 

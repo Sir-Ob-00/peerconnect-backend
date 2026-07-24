@@ -7,7 +7,7 @@ async function seed() {
     where: { code: "USTED" },
     update: {},
     create: {
-      name: "University of Science, Technology and Engineering Development",
+      name: "University of Skill Training and Enterpreneural Development",
       code: "USTED",
       isActive: true,
     },

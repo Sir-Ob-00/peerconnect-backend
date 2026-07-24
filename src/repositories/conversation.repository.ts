@@ -62,4 +62,17 @@ export const conversationRepository = {
       orderBy: { createdAt: "desc" },
     });
   },
+
+  listAll(skip = 0, take = 50): Promise<ConversationWithParticipants[]> {
+    return prisma.conversation.findMany({
+      skip,
+      take,
+      include: { userOne: { select: participantSelect }, userTwo: { select: participantSelect } },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  count(): Promise<number> {
+    return prisma.conversation.count();
+  },
 };

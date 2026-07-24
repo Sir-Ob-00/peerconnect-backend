@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const updateAcademicProfileSchema = z.object({
-  universityId: z.string().uuid("Invalid university"),
-  departmentId: z.string().uuid().optional(),
-  levelId: z.string().uuid().optional(),
-  programmeId: z.string().uuid().optional(),
+  universityId: z.string().min(1, "University is required"),
+  departmentId: z.string().optional(),
+  levelId: z.string().optional(),
+  programmeId: z.string().optional(),
 });
 
 export type UpdateAcademicProfileInput = z.infer<typeof updateAcademicProfileSchema>;
@@ -47,6 +47,18 @@ export const customSkillSchema = z.object({
 });
 
 export type CustomSkillInput = z.infer<typeof customSkillSchema>;
+
+export const courseIdSchema = z.object({
+  courseId: z.string().uuid("Invalid course ID"),
+});
+
+export type CourseIdInput = z.infer<typeof courseIdSchema>;
+
+export const skillIdSchema = z.object({
+  skillId: z.string().uuid("Invalid skill ID"),
+});
+
+export type SkillIdInput = z.infer<typeof skillIdSchema>;
 
 export const helpSelectionSchema = z.object({
   courseIds: z.array(z.string().uuid("Invalid course ID")).optional(),

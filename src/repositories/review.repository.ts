@@ -74,6 +74,13 @@ export const reviewRepository = {
     };
   },
 
+  async getAverageRating(): Promise<number> {
+    const result = await prisma.review.aggregate({
+      _avg: { rating: true },
+    });
+    return result._avg.rating ?? 0;
+  },
+
   async findMany(filters: {
     reviewerId?: string;
     receiverId?: string;

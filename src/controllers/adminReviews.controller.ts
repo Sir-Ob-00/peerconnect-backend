@@ -21,7 +21,7 @@ export const adminReviewsController = {
       take: limit,
     });
 
-    sendSuccess(res, {
+    return sendSuccess(res, {
       message: "Reviews retrieved.",
       data: {
         data: items.map((r) => ({
@@ -65,7 +65,7 @@ export const adminReviewsController = {
 
     const summary = await reviewRepository.getRatingSummary(userId);
 
-    sendSuccess(res, {
+    return sendSuccess(res, {
       message: "Reviews for user retrieved.",
       data: {
         user: {

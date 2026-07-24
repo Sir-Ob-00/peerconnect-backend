@@ -21,7 +21,7 @@ export const adminSessionsController = {
       take: limit,
     });
 
-    sendSuccess(res, {
+    return sendSuccess(res, {
       message: "Sessions retrieved.",
       data: {
         data: items.map((s) => ({
@@ -62,7 +62,7 @@ export const adminSessionsController = {
     const session = await sessionRepository.findById(id);
     if (!session) throw ApiError.notFound("Session not found");
 
-    sendSuccess(res, {
+    return sendSuccess(res, {
       message: "Session retrieved.",
       data: {
         id: session.id,

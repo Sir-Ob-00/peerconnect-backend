@@ -23,4 +23,8 @@ export const programmeRepository = {
   create(data: Prisma.ProgrammeCreateInput): Promise<Programme> {
     return prisma.programme.create({ data });
   },
+
+  update(id: string, data: Prisma.ProgrammeUpdateInput): Promise<Programme> {
+    return prisma.programme.update({ where: { id }, data });
+  },
 };

@@ -8,7 +8,8 @@ import {
   studyPreferenceSchema,
   customCourseSchema,
   customSkillSchema,
-  helpSelectionSchema,
+  courseIdSchema,
+  skillIdSchema,
   learningInterestsSchema,
   availabilitySchema,
   updateAvailabilitySchema,
@@ -34,20 +35,20 @@ onboardingRouter.patch("/profile/study-preferences", validateRequest({ body: stu
 onboardingRouter.get("/courses", onboardingController.searchCourses);
 onboardingRouter.post("/courses/custom", validateRequest({ body: customCourseSchema }), onboardingController.createCustomCourse);
 onboardingRouter.get("/profile/learning-courses", onboardingController.getLearningCourses);
-onboardingRouter.post("/profile/learning-courses", onboardingController.addLearningCourse);
+onboardingRouter.post("/profile/learning-courses", validateRequest({ body: courseIdSchema }), onboardingController.addLearningCourse);
 onboardingRouter.delete("/profile/learning-courses/:courseId", onboardingController.removeLearningCourse);
 
 onboardingRouter.get("/skills", onboardingController.searchSkills);
 onboardingRouter.post("/skills/custom", validateRequest({ body: customSkillSchema }), onboardingController.createCustomSkill);
 onboardingRouter.get("/profile/learning-skills", onboardingController.getLearningSkills);
-onboardingRouter.post("/profile/learning-skills", onboardingController.addLearningSkill);
+onboardingRouter.post("/profile/learning-skills", validateRequest({ body: skillIdSchema }), onboardingController.addLearningSkill);
 onboardingRouter.delete("/profile/learning-skills/:skillId", onboardingController.removeLearningSkill);
 
 onboardingRouter.get("/profile/help-courses", onboardingController.getHelpCourses);
-onboardingRouter.post("/profile/help-courses", validateRequest({ body: helpSelectionSchema }), onboardingController.addHelpCourse);
+onboardingRouter.post("/profile/help-courses", validateRequest({ body: courseIdSchema }), onboardingController.addHelpCourse);
 onboardingRouter.delete("/profile/help-courses/:courseId", onboardingController.removeHelpCourse);
 onboardingRouter.get("/profile/help-skills", onboardingController.getHelpSkills);
-onboardingRouter.post("/profile/help-skills", validateRequest({ body: helpSelectionSchema }), onboardingController.addHelpSkill);
+onboardingRouter.post("/profile/help-skills", validateRequest({ body: skillIdSchema }), onboardingController.addHelpSkill);
 onboardingRouter.delete("/profile/help-skills/:skillId", onboardingController.removeHelpSkill);
 
 onboardingRouter.get("/learning-interests", onboardingController.getLearningInterests);

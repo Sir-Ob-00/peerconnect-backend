@@ -30,4 +30,8 @@ export const universityRepository = {
   create(data: Prisma.UniversityCreateInput): Promise<University> {
     return prisma.university.create({ data });
   },
+
+  update(id: string, data: Prisma.UniversityUpdateInput): Promise<University> {
+    return prisma.university.update({ where: { id }, data });
+  },
 };

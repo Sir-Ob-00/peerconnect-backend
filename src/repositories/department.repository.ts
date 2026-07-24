@@ -23,4 +23,8 @@ export const departmentRepository = {
   create(data: Prisma.DepartmentCreateInput): Promise<Department> {
     return prisma.department.create({ data });
   },
+
+  update(id: string, data: Prisma.DepartmentUpdateInput): Promise<Department> {
+    return prisma.department.update({ where: { id }, data });
+  },
 };

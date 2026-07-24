@@ -23,70 +23,72 @@ export const adminStudentsController = {
       take: limit,
     });
 
-    const rows = await Promise.all(
-      items.map(async (u) => {
-        const profile = await studentProfileRepository.findByUserId(u.id);
+    if (items.length === 0) {
+      return sendSuccess(res, { message: "Students retrieved.", data: { data: [], pagination: { page, limit, totalItems: 0, totalPages: 0 } } });
+    }
 
-        let universityName: string | null = null;
-        let departmentName: string | null = null;
-        let programmeName: string | null = null;
-        let levelName: string | null = null;
+    const userIds = items.map((u) => u.id);
+    const profiles = await prisma.studentProfile.findMany({ where: { userId: { in: userIds } }, include: { user: true } });
 
-        if (profile?.universityId) {
-          const university = await prisma.university.findUnique({ where: { id: profile.universityId } });
-          universityName = university?.name ?? null;
-        }
-        if (profile?.departmentId) {
-          const department = await prisma.department.findUnique({ where: { id: profile.departmentId } });
-          departmentName = department?.name ?? null;
-        }
-        if (profile?.programmeId) {
-          const programme = await prisma.programme.findUnique({ where: { id: profile.programmeId } });
-          programmeName = programme?.name ?? null;
-        }
-        if (profile?.levelId) {
-          const level = await prisma.level.findUnique({ where: { id: profile.levelId } });
-          levelName = level?.name ?? null;
-        }
+    const universityIds = profiles.map((p) => p.universityId).filter(Boolean) as string[];
+    const departmentIds = profiles.map((p) => p.departmentId).filter(Boolean) as string[];
+    const programmeIds = profiles.map((p) => p.programmeId).filter(Boolean) as string[];
+    const levelIds = profiles.map((p) => p.levelId).filter(Boolean) as string[];
 
-        return {
-          id: u.id,
-          firstName: u.firstName,
-          lastName: u.lastName,
-          email: u.email,
-          role: u.role,
-          accountStatus: u.accountStatus,
-          isEmailVerified: u.isEmailVerified,
-          studentVerified: u.studentVerified,
-          verificationStatus: u.verificationStatus,
-          setupProgress: u.setupProgress,
-          createdAt: u.createdAt,
-          updatedAt: u.updatedAt,
-          academicProfile: {
-            university: universityName,
-            department: departmentName,
-            programme: programmeName,
-            level: levelName,
-          },
-          profile: profile
-            ? {
-                university: profile.university,
-                department: profile.department,
-                level: profile.level,
-                programme: profile.programme,
-                skills: profile.skills,
-                learningInterests: profile.learningInterests,
-                isAvailable: profile.isAvailable,
-                studentId: profile.studentId,
-                wantsToLearnCourses: profile.wantsToLearnCourses,
-                wantsToLearnSkills: profile.wantsToLearnSkills,
-              }
-            : null,
-        };
-      })
-    );
+    const [universities, departments, programmes, levels] = await Promise.all([
+      prisma.university.findMany({ where: { id: { in: universityIds } } }),
+      prisma.department.findMany({ where: { id: { in: departmentIds } } }),
+      prisma.programme.findMany({ where: { id: { in: programmeIds } } }),
+      prisma.level.findMany({ where: { id: { in: levelIds } } }),
+    ]);
 
-    sendSuccess(res, {
+    const profileMap = new Map(profiles.map((p) => [p.userId, p]));
+    const universityMap = new Map(universities.map((u: any) => [u.id, u.name]));
+    const departmentMap = new Map(departments.map((d: any) => [d.id, d.name]));
+    const programmeMap = new Map(programmes.map((p: any) => [p.id, p.name]));
+    const levelMap = new Map(levels.map((l: any) => [l.id, l.name]));
+
+    const rows = items.map((u) => {
+      const profile = profileMap.get(u.id);
+      return {
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        role: u.role,
+        accountStatus: u.accountStatus,
+        profileImage: u.profileImage || profile?.profilePhoto || null,
+        isEmailVerified: u.isEmailVerified,
+        studentVerified: u.studentVerified,
+        verificationStatus: u.verificationStatus,
+        setupProgress: u.setupProgress,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        academicProfile: {
+          university: profile?.universityId ? universityMap.get(profile.universityId) ?? null : null,
+          department: profile?.departmentId ? departmentMap.get(profile.departmentId) ?? null : null,
+          programme: profile?.programmeId ? programmeMap.get(profile.programmeId) ?? null : null,
+          level: profile?.levelId ? levelMap.get(profile.levelId) ?? null : null,
+        },
+        profile: profile
+          ? {
+              profilePhoto: profile.profilePhoto,
+              university: profile.university,
+              department: profile.department,
+              level: profile.level,
+              programme: profile.programme,
+              skills: profile.skills,
+              learningInterests: profile.learningInterests,
+              isAvailable: profile.isAvailable,
+              studentId: profile.studentId,
+              wantsToLearnCourses: profile.wantsToLearnCourses,
+              wantsToLearnSkills: profile.wantsToLearnSkills,
+            }
+          : null,
+      };
+    });
+
+    return sendSuccess(res, {
       message: "Students retrieved.",
       data: {
         data: rows,
@@ -172,7 +174,7 @@ export const adminStudentsController = {
         email: user.email,
         role: user.role,
         accountStatus: user.accountStatus,
-        profileImage: user.profileImage,
+        profileImage: user.profileImage || profile?.profilePhoto || null,
         isEmailVerified: user.isEmailVerified,
         studentVerified: user.studentVerified,
         verificationStatus: user.verificationStatus,
@@ -219,6 +221,7 @@ export const adminStudentsController = {
           endTime: a.endTime,
         })),
         bio: profile?.bio ?? null,
+        profilePhoto: profile?.profilePhoto ?? null,
         idVerification: {
           idPhotoUrl: user.idPhotoUrl,
           status: user.verificationStatus,

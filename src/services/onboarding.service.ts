@@ -108,47 +108,49 @@ export const onboardingService = {
     const user = await userRepository.findActiveById(userId);
     if (!user) throw ApiError.notFound("User not found.");
 
-    if (input.universityId) {
-      const university = await universityRepository.findById(input.universityId);
-      if (!university || !university.isActive) {
-        throw ApiError.badRequest("Selected university is not valid.");
-      }
+    const universityId = input.universityId?.trim() || undefined;
+    const departmentId = input.departmentId?.trim() || undefined;
+    const levelId = input.levelId?.trim() || undefined;
+    const programmeId = input.programmeId?.trim() || undefined;
+
+    if (!universityId) {
+      throw ApiError.badRequest("University is required.");
+    }
+
+    const university = await universityRepository.findById(universityId);
+    if (!university || !university.isActive) {
+      throw ApiError.badRequest("Selected university is not valid.");
     }
 
     let departmentName: string | undefined;
-    let universityName: string | undefined;
+    let universityName = university.name;
 
-    if (input.universityId) {
-      const university = await universityRepository.findById(input.universityId);
-      universityName = university?.name ?? undefined;
-    }
-
-    if (input.departmentId) {
-      const department = await departmentRepository.findById(input.departmentId);
+    if (departmentId) {
+      const department = await departmentRepository.findById(departmentId);
       if (!department) {
         throw ApiError.badRequest("Selected department is not valid.");
       }
-      if (department.universityId !== input.universityId) {
+      if (department.universityId !== universityId) {
         throw ApiError.badRequest("Department does not belong to the selected university.");
       }
       departmentName = department.name;
     }
 
     let programmeName: string | undefined;
-    if (input.programmeId) {
-      const programme = await programmeRepository.findById(input.programmeId);
+    if (programmeId) {
+      const programme = await programmeRepository.findById(programmeId);
       if (!programme) {
         throw ApiError.badRequest("Selected programme is not valid.");
       }
-      if (programme.universityId !== input.universityId) {
+      if (programme.universityId !== universityId) {
         throw ApiError.badRequest("Programme does not belong to the selected university.");
       }
       programmeName = programme.name;
     }
 
     let levelName: string | undefined;
-    if (input.levelId) {
-      const level = await levelRepository.findById(input.levelId);
+    if (levelId) {
+      const level = await levelRepository.findById(levelId);
       if (!level || !level.isActive) {
         throw ApiError.badRequest("Selected level is not valid.");
       }
@@ -156,13 +158,13 @@ export const onboardingService = {
     }
 
     const updated = await studentProfileRepository.updateByUserId(userId, {
-      universityId: input.universityId,
+      universityId,
       university: universityName,
-      departmentId: input.departmentId,
+      departmentId,
       department: departmentName,
-      levelId: input.levelId,
+      levelId,
       level: levelName,
-      programmeId: input.programmeId,
+      programmeId,
       programme: programmeName,
     });
 
@@ -441,9 +443,9 @@ export const onboardingService = {
 
     const slot = await availabilityRepository.create({
       userId,
-      dayOfWeek: input.dayOfWeek as any,
-      startTime: input.startTime,
-      endTime: input.endTime,
+      dayOfWeek: input.dayOfWeek,
+      startTime: String(input.startTime).replace(/\0/g, ""),
+      endTime: String(input.endTime).replace(/\0/g, ""),
     });
 
     return toAvailabilityDTO(slot);
@@ -460,9 +462,9 @@ export const onboardingService = {
     }
 
     const updateData: any = {};
-    if (input.dayOfWeek !== undefined) updateData.dayOfWeek = input.dayOfWeek as any;
-    if (input.startTime !== undefined) updateData.startTime = input.startTime;
-    if (input.endTime !== undefined) updateData.endTime = input.endTime;
+    if (input.dayOfWeek !== undefined) updateData.dayOfWeek = input.dayOfWeek;
+    if (input.startTime !== undefined) updateData.startTime = String(input.startTime).replace(/\0/g, "");
+    if (input.endTime !== undefined) updateData.endTime = String(input.endTime).replace(/\0/g, "");
 
     const updated = await availabilityRepository.update(availabilityId, updateData);
     return toAvailabilityDTO(updated);

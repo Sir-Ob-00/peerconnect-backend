@@ -3,7 +3,9 @@ import type { StudentProfile, User } from "@prisma/client";
 export interface StudentProfileView {
   id: string;
   userId: string;
+  university: string | null;
   department: string | null;
+  programme: string | null;
   level: string | null;
   skills: string[];
   learningInterests: string[];
@@ -21,7 +23,9 @@ export function toStudentProfileView(profile: StudentProfile): StudentProfileVie
   return {
     id: profile.id,
     userId: profile.userId,
+    university: profile.university,
     department: profile.department,
+    programme: profile.programme,
     level: profile.level,
     skills: profile.skills,
     learningInterests: profile.learningInterests,
@@ -39,7 +43,9 @@ export interface PublicStudentProfile {
   userId: string;
   firstName: string;
   lastName: string;
+  university: string | null;
   department: string | null;
+  programme: string | null;
   level: string | null;
   skills: string[];
   learningInterests: string[];
@@ -66,7 +72,9 @@ export function toPublicStudentProfile(user: User, profile: StudentProfile | nul
     userId: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
+    university: profile?.university ?? null,
     department: profile?.department ?? null,
+    programme: profile?.programme ?? null,
     level: profile?.level ?? null,
     skills: profile?.skills ?? [],
     learningInterests: profile?.learningInterests ?? [],

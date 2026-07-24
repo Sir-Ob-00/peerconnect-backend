@@ -25,6 +25,10 @@ export const userRepository = {
     return prisma.user.findMany({ where: { verificationStatus: status } });
   },
 
+  async countByVerificationStatus(status: string): Promise<number> {
+    return prisma.user.count({ where: { verificationStatus: status } });
+  },
+
   /** Convenience for auth flows: only ever operate on non-deleted users. */
   findActiveById(id: string): Promise<User | null> {
     return prisma.user.findFirst({ where: { id, deletedAt: null } });
@@ -75,5 +79,14 @@ export const userRepository = {
       prisma.user.count({ where }),
     ]);
     return { items, totalItems };
+  },
+
+  async count(filters?: { role?: string; deletedAt?: boolean; createdAt?: { gte?: Date; lt?: Date } }): Promise<number> {
+    const where: Prisma.UserWhereInput = {};
+    if (filters?.role) where.role = filters.role as any;
+    if (filters?.deletedAt !== undefined) where.deletedAt = filters.deletedAt ? { not: null } : null;
+    if (filters?.createdAt?.gte) where.createdAt = { gte: filters.createdAt.gte };
+    if (filters?.createdAt?.lt) where.createdAt = { ...(where.createdAt as any), lt: filters.createdAt.lt };
+    return prisma.user.count({ where });
   },
 };

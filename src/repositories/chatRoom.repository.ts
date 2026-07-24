@@ -22,6 +22,7 @@ export interface ChatRoomWithMembers {
       profileImage: string | null;
     };
   }>;
+  createdBy?: { id: string; firstName: string; lastName: string; profileImage: string | null };
 }
 
 export const chatRoomRepository = {
@@ -48,11 +49,30 @@ export const chatRoomRepository = {
     }) as Promise<ChatRoomWithMembers | null>;
   },
 
-  listForUser(userId: string) {
+  async listForUser(userId: string) {
     return prisma.chatRoom.findMany({ where: { members: { some: { userId } } }, orderBy: { updatedAt: "desc" } });
+  },
+
+  findMany() {
+    return prisma.chatRoom.findMany({ orderBy: { createdAt: "desc" } });
   },
 
   update(id: string, data: any) {
     return prisma.chatRoom.update({ where: { id }, data });
+  },
+
+  delete(id: string) {
+    return prisma.chatRoom.delete({ where: { id } });
+  },
+
+  async findByIdWithCreator(id: string) {
+    return prisma.chatRoom.findUnique({
+      where: { id },
+      include: { createdBy: { select: { id: true, firstName: true, lastName: true, profileImage: true } } },
+    });
+  },
+
+  count(): Promise<number> {
+    return prisma.chatRoom.count();
   },
 };

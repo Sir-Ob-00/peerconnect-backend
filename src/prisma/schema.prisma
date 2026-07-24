@@ -68,12 +68,17 @@ model User {
   createdChatRooms    ChatRoom[]
   chatMemberships     ChatMember[]
   chatMessages        ChatMessage[]
-  studentCourses      StudentCourse[]
-  studentSkills       StudentSkill[]
-  studentLearningInterests StudentLearningInterest[]
-  availabilities      Availability[]
+   studentCourses      StudentCourse[]
+   studentSkills       StudentSkill[]
+   studentLearningInterests StudentLearningInterest[]
+   availabilities      Availability[]
+   reportsFiled        Report[]             @relation("ReportReporter")
+   reportsReceived     Report[]             @relation("ReportReportedUser")
+   reportsResolved     Report[]             @relation("ReportAdmin")
+   auditLogs           AuditLog[]
+   announcementsMade   Announcement[]
 
-  @@map("users")
+   @@map("users")
 }
 
 // ---------------------------------------------------------------------------
@@ -404,16 +409,6 @@ model ChatMessage {
 // Phase 9 — Student Onboarding & Learning Context
 // ---------------------------------------------------------------------------
 
-enum DayOfWeek {
-  SUNDAY
-  MONDAY
-  TUESDAY
-  WEDNESDAY
-  THURSDAY
-  FRIDAY
-  SATURDAY
-}
-
 enum StudentItemType {
   LEARNING
   HELP
@@ -539,7 +534,7 @@ model Availability {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dayOfWeek   DayOfWeek
+  dayOfWeek   Int
   startTime   String
   endTime     String
   isActive    Boolean  @default(true)
@@ -590,7 +585,153 @@ model StudentLearningInterest {
 
   createdAt DateTime @default(now())
 
-  @@unique([userId, interestId])
-  @@index([userId])
-  @@map("student_learning_interests")
+   @@unique([userId, interestId])
+   @@index([userId])
+   @@map("student_learning_interests")
+}
+
+// ---------------------------------------------------------------------------
+// Admin Dashboard — Reports & Complaints
+// ---------------------------------------------------------------------------
+
+enum ReportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportEntityType {
+  USER
+  MESSAGE
+  REVIEW
+  SESSION
+  CHAT_ROOM
+}
+
+model Report {
+  id               String         @id @default(uuid())
+  reporterId       String
+  reporter         User           @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUserId   String
+  reportedUser     User           @relation("ReportReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  entityType       ReportEntityType
+  entityId         String
+  reason           String
+  description      String?
+  status           ReportStatus   @default(OPEN)
+  adminId          String?
+  admin            User?          @relation("ReportAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+  adminNotes       String?
+  resolvedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([entityType, entityId])
+  @@map("reports")
+}
+
+// ---------------------------------------------------------------------------
+// Admin Dashboard — Audit Logs
+// ---------------------------------------------------------------------------
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  SUSPEND
+  ACTIVATE
+  EXPORT
+  BROADCAST
+  SETTING_UPDATE
+}
+
+model AuditLog {
+  id         String     @id @default(uuid())
+  actorId    String
+  actor      User       @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  action     AuditAction
+  entityType String
+  entityId   String?
+  changes    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime   @default(now())
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Admin Dashboard — Announcements
+// ---------------------------------------------------------------------------
+
+enum AnnouncementTarget {
+  ALL
+  UNIVERSITY
+  DEPARTMENT
+  PROGRAMME
+  LEVEL
+}
+
+model Announcement {
+  id          String              @id @default(uuid())
+  title       String
+  message     String
+  target      AnnouncementTarget @default(ALL)
+  targetId    String?
+  createdById String
+  createdBy   User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  isActive    Boolean             @default(true)
+  scheduledAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([createdById])
+  @@index([isActive])
+  @@map("announcements")
+}
+
+// ---------------------------------------------------------------------------
+// Admin Dashboard — Settings
+// ---------------------------------------------------------------------------
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+enum SettingCategory {
+  GENERAL
+  EMAIL
+  SECURITY
+  REGISTRATION
+  FEATURES
+}
+
+model Setting {
+  id          String         @id @default(uuid())
+  key         String         @unique
+  value       String
+  type        SettingType    @default(STRING)
+  category    SettingCategory @default(GENERAL)
+  description String?
+  isPublic    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([category])
+  @@map("settings")
 }

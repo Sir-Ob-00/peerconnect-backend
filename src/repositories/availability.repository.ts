@@ -1,9 +1,9 @@
-import type { Availability, Prisma } from "@prisma/client";
+import type { Availability } from "@prisma/client";
 import { prisma } from "../config/database";
 
 export type AvailabilityInput = {
   userId: string;
-  dayOfWeek: Prisma.AvailabilityCreateInput["dayOfWeek"];
+  dayOfWeek: number;
   startTime: string;
   endTime: string;
 };
@@ -25,17 +25,17 @@ export const availabilityRepository = {
       data: {
         userId: data.userId,
         dayOfWeek: data.dayOfWeek,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: data.startTime.replace(/\0/g, ""),
+        endTime: data.endTime.replace(/\0/g, ""),
       },
     });
   },
 
   update(id: string, data: Partial<AvailabilityInput>): Promise<Availability> {
-    const updateData: Prisma.AvailabilityUpdateInput = {};
-    if (data.dayOfWeek) updateData.dayOfWeek = data.dayOfWeek;
-    if (data.startTime) updateData.startTime = data.startTime;
-    if (data.endTime) updateData.endTime = data.endTime;
+    const updateData: any = {};
+    if (data.dayOfWeek !== undefined) updateData.dayOfWeek = data.dayOfWeek;
+    if (data.startTime !== undefined) updateData.startTime = data.startTime.replace(/\0/g, "");
+    if (data.endTime !== undefined) updateData.endTime = data.endTime.replace(/\0/g, "");
 
     return prisma.availability.update({
       where: { id },

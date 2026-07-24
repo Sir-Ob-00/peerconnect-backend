@@ -101,4 +101,8 @@ export const sessionRepository = {
     ]);
     return { items, totalItems };
   },
+
+  count(where?: Prisma.SessionWhereInput): Promise<number> {
+    return prisma.session.count({ where });
+  },
 };
