@@ -135,21 +135,32 @@ async function seed() {
   }
   console.log("Levels seeded:", levels.map((l) => l.name).join(", "));
 
-  async function createCourse(name: string, opts: { programmeId?: string; departmentId?: string; code?: string }) {
+  function pickLevel(index: number, total: number): string {
+    const step = Math.max(1, Math.floor(total / levels.length));
+    const lvlIndex = Math.min(levels.length - 1, Math.floor(index / step));
+    return levels[lvlIndex].id;
+  }
+
+  async function createCourse(name: string, opts: { programmeId?: string; departmentId?: string; code?: string; levelId?: string | null }) {
     const programme = opts.programmeId ? await prisma.programme.findUnique({ where: { id: opts.programmeId } }) : null;
     const deptId = opts.departmentId || programme?.departmentId;
     const uniId = university.id;
     const existing = await prisma.course.findFirst({
       where: { name: { equals: name, mode: "insensitive" }, universityId: uniId, departmentId: deptId || undefined },
     });
-    if (existing) return existing;
+    if (existing) {
+      if (opts.levelId && !existing.levelId) {
+        await prisma.course.update({ where: { id: existing.id }, data: { levelId: opts.levelId } });
+      }
+      return existing;
+    }
     return prisma.course.create({
       data: {
         name,
         code: opts.code || null,
         universityId: uniId,
         departmentId: deptId || null,
-        levelId: null,
+        levelId: opts.levelId ?? null,
         programmeId: opts.programmeId || null,
         custom: false,
       },
@@ -280,8 +291,8 @@ async function seed() {
   };
 
   for (const [progId, courseNames] of Object.entries(programmeCourses)) {
-    for (const courseName of courseNames) {
-      await createCourse(courseName, { programmeId: progId });
+    for (let idx = 0; idx < courseNames.length; idx++) {
+      await createCourse(courseNames[idx], { programmeId: progId, levelId: pickLevel(idx, courseNames.length) });
     }
   }
   console.log("Programme courses seeded.");
@@ -308,8 +319,8 @@ async function seed() {
   };
 
   for (const [deptId, courseNames] of Object.entries(genericCoursesByDepartment)) {
-    for (const courseName of courseNames) {
-      await createCourse(courseName, { departmentId: deptId });
+    for (let idx = 0; idx < courseNames.length; idx++) {
+      await createCourse(courseNames[idx], { departmentId: deptId, levelId: pickLevel(idx, courseNames.length) });
     }
   }
   console.log("Generic department courses seeded.");

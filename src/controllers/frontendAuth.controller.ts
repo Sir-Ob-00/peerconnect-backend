@@ -23,7 +23,7 @@ function buildFrontendUser(user: any, profile: any = {}) {
     department: profile.department || "",
     level: profile.level || "",
     accountType: user.role === "ADMIN" ? "admin" : "student",
-    avatarUrl: user.profileImage || "",
+    avatarUrl: user.profileImage || profile?.profilePhoto || user.avatarUrl || "",
     bio: profile.bio || "",
     skills: (profile.skills || []).map((skill: string, idx: number) => ({
       id: `sk_${idx}`,

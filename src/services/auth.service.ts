@@ -233,7 +233,7 @@ export const authService = {
   },
 
   // --- Mobile-specific registration + email OTP verification ---
-  async registerMobile(input: RegisterInput & { fullName?: string; university?: string; department?: string; level?: string }) {
+  async registerMobile(input: { firstName?: string; lastName?: string; fullName?: string; email: string; password: string; confirmPassword?: string; university?: string; department?: string; level?: string }) {
     // Validate university email domain using reusable utility
     try {
       const { validateUniversityEmailOrThrow } = await import("../utils/email.util");

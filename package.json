@@ -19,7 +19,8 @@
     "test:coverage": "jest --coverage"
   },
   "prisma": {
-    "schema": "src/prisma/schema.prisma"
+    "schema": "src/prisma/schema.prisma",
+    "seed": "tsx src/prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",

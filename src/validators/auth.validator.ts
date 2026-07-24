@@ -27,18 +27,18 @@ export const registerSchema = z
   });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
-// Mobile registration schema — accepts fullName and university-related fields
+// Mobile registration schema — matches the frontend payload
 export const mobileRegisterSchema = z
   .object({
     fullName: z.string().trim().min(2, "Full name must be at least 2 characters"),
     email: z.string().trim().toLowerCase().email("Must be a valid email address"),
     password: strongPassword,
-    confirmPassword: z.string().min(1, "Confirm password is required"),
-    university: z.string().trim().min(2, "University is required"),
+    confirmPassword: z.string().min(1, "Confirm password is required").optional(),
+    university: z.string().trim().min(2, "University is required").optional(),
     department: z.string().trim().optional(),
     level: z.string().trim().optional(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => !data.confirmPassword || data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
