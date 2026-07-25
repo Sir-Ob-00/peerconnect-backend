@@ -50,7 +50,19 @@ export const chatRoomRepository = {
   },
 
   async listForUser(userId: string) {
-    return prisma.chatRoom.findMany({ where: { members: { some: { userId } } }, orderBy: { updatedAt: "desc" } });
+    return prisma.chatRoom.findMany({
+      where: { members: { some: { userId } } },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, profileImage: true },
+            },
+          },
+        },
+      },
+    });
   },
 
   findMany() {

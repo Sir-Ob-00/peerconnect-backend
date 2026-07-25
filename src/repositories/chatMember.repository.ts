@@ -27,4 +27,8 @@ export const chatMemberRepository = {
   countAdmins(chatRoomId: string) {
     return prisma.chatMember.count({ where: { chatRoomId, role: "ADMIN" } });
   },
+
+  countMembers(chatRoomId: string) {
+    return prisma.chatMember.count({ where: { chatRoomId } });
+  },
 };

@@ -216,6 +216,15 @@ chatRouter.post(
   chatController.leaveGroup
 );
 
+chatRouter.delete(
+  "/chat/groups/:chatId",
+  authenticate,
+  requireStudent,
+  requireChatMember,
+  validateRequest({ params: groupIdParamSchema }),
+  chatController.deleteGroup
+);
+
 chatRouter.get(
   "/chat/groups/:chatId/messages",
   authenticate,

@@ -42,4 +42,12 @@ export const chatMessageRepository = {
   markRoomRead(chatRoomId: string, readerId: string) {
     return prisma.chatMessage.updateMany({ where: { chatRoomId, isRead: false, senderId: { not: readerId } }, data: { isRead: true } });
   },
+
+  async findLastMessage(chatRoomId: string): Promise<ChatMessage | null> {
+    return prisma.chatMessage.findFirst({
+      where: { chatRoomId },
+      orderBy: { createdAt: "desc" },
+      include: { sender: { select: { id: true, firstName: true, lastName: true } } as any },
+    }) as Promise<any>;
+  },
 };

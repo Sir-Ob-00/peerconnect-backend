@@ -81,6 +81,18 @@ export interface ChatRoomView {
   members: ChatMemberView[];
   createdAt: Date;
   updatedAt: Date;
+  lastMessage?: {
+    id: string;
+    chatRoomId: string;
+    senderId: string;
+    senderName?: string;
+    content: string | null;
+    messageType: string;
+    attachmentUrl: string | null;
+    attachmentType: string | null;
+    isRead: boolean;
+    createdAt: Date;
+  } | null;
 }
 
 export interface ChatMessageView {
@@ -110,6 +122,7 @@ export function toChatMessageView(message: any): ChatMessageView {
 }
 
 export function toChatRoomView(room: any): ChatRoomView {
+  const lastMessage = room.lastMessage;
   return {
     id: room.id,
     type: String(room.type),
@@ -120,5 +133,21 @@ export function toChatRoomView(room: any): ChatRoomView {
     members: (room.members || []).map((m: any) => ({ id: m.id, role: m.role, joinedAt: m.joinedAt, user: toParticipant(m.user) })),
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
+    lastMessage: lastMessage
+      ? {
+          id: lastMessage.id,
+          chatRoomId: lastMessage.chatRoomId,
+          senderId: lastMessage.senderId,
+          senderName: lastMessage.sender
+            ? `${lastMessage.sender.firstName} ${lastMessage.sender.lastName}`.trim()
+            : undefined,
+          content: lastMessage.content,
+          messageType: lastMessage.messageType,
+          attachmentUrl: lastMessage.attachmentUrl,
+          attachmentType: lastMessage.attachmentType,
+          isRead: lastMessage.isRead,
+          createdAt: lastMessage.createdAt,
+        }
+      : null,
   };
 }

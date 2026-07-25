@@ -231,7 +231,13 @@ export const chatService = {
 
   async listGroupsForUser(userId: string) {
     const rooms = await chatRoomRepository.listForUser(userId);
-    return rooms;
+    const withLastMessage = await Promise.all(
+      rooms.map(async (room) => {
+        const lastMessage = await chatMessageRepository.findLastMessage(room.id);
+        return { ...room, lastMessage };
+      })
+    );
+    return withLastMessage;
   },
 
   async getGroupOrThrow(chatRoomId: string, userId: string) {
@@ -290,7 +296,24 @@ export const chatService = {
         throw ApiError.badRequest("Cannot leave group as the last admin. Promote another admin before leaving.");
       }
     }
+
+    const currentCount = await chatMemberRepository.countMembers(chatRoomId);
     await chatMemberRepository.removeMember(chatRoomId, userId);
+
+    if (currentCount <= 1) {
+      await chatRoomRepository.delete(chatRoomId);
+      return { deleted: true };
+    }
+
+    return { success: true };
+  },
+
+  async deleteGroup(chatRoomId: string, requesterId: string) {
+    const room = await chatRoomRepository.findByIdWithMembers(chatRoomId);
+    if (!room) throw ApiError.notFound("Chat room not found.");
+    const isMember = room.members.some((m: any) => m.user.id === requesterId);
+    if (!isMember) throw ApiError.forbidden("You are not a member of this chat room.");
+    await chatRoomRepository.delete(chatRoomId);
     return { success: true };
   },
 

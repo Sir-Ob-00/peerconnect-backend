@@ -125,8 +125,18 @@ export const chatController = {
 
   leaveGroup: asyncHandler(async (req: Request<{ chatId: string }>, res: Response) => {
     const userId = requireUserId(req);
-    await chatService.leaveGroup(req.params.chatId, userId);
-    sendSuccess(res, { message: "Left group." });
+    const result = await chatService.leaveGroup(req.params.chatId, userId);
+    if ("deleted" in result && result.deleted) {
+      sendSuccess(res, { message: "Left group and group was deleted because no members remained." });
+    } else {
+      sendSuccess(res, { message: "Left group." });
+    }
+  }),
+
+  deleteGroup: asyncHandler(async (req: Request<{ chatId: string }>, res: Response) => {
+    const userId = requireUserId(req);
+    await chatService.deleteGroup(req.params.chatId, userId);
+    sendSuccess(res, { message: "Group deleted." });
   }),
 
   postGroupMessage: asyncHandler(async (req: Request<{ chatId: string }>, res: Response) => {
