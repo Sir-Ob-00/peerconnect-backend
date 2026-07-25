@@ -1,21 +1,35 @@
-import type { Notification, NotificationType } from "@prisma/client";
+import type { Notification, NotificationType, User } from "@prisma/client";
 import { prisma } from "../config/database";
 
 interface CreateNotificationData {
   userId: string;
+  senderId?: string | null;
   title: string;
   message: string;
   type: NotificationType;
+  entityId?: string | null;
+  entityType?: string | null;
 }
 
 interface ListResult {
-  items: Notification[];
+  items: (Notification & { sender?: User | null })[];
   totalItems: number;
 }
 
 export const notificationRepository = {
-  create(data: CreateNotificationData): Promise<Notification> {
-    return prisma.notification.create({ data });
+  create(data: CreateNotificationData): Promise<Notification & { sender?: User | null }> {
+    return prisma.notification.create({
+      data: {
+        userId: data.userId,
+        senderId: data.senderId || null,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        entityId: data.entityId || null,
+        entityType: data.entityType || null,
+      },
+      include: { sender: true },
+    });
   },
 
   findById(id: string): Promise<Notification | null> {
@@ -25,7 +39,13 @@ export const notificationRepository = {
   async listByUser({ userId, skip, take }: { userId: string; skip: number; take: number }): Promise<ListResult> {
     const where = { userId };
     const [items, totalItems] = await Promise.all([
-      prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+        include: { sender: true },
+      }),
       prisma.notification.count({ where }),
     ]);
     return { items, totalItems };
@@ -33,7 +53,12 @@ export const notificationRepository = {
 
   async listAll({ skip, take }: { skip: number; take: number }): Promise<ListResult> {
     const [items, totalItems] = await Promise.all([
-      prisma.notification.findMany({ orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.notification.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+        include: { sender: true },
+      }),
       prisma.notification.count(),
     ]);
     return { items, totalItems };
@@ -44,7 +69,14 @@ export const notificationRepository = {
   },
 
   markRead(id: string): Promise<Notification> {
-    return prisma.notification.update({ where: { id }, data: { isRead: true } });
+    return prisma.notification.update({ where: { id }, data: { isRead: true, readAt: new Date() } });
+  },
+
+  markAllRead(userId: string): Promise<number> {
+    return prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    }).then((res) => res.count);
   },
 
   delete(id: string): Promise<Notification> {

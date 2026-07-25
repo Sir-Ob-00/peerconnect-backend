@@ -85,8 +85,11 @@ jest.mock("../../src/repositories/notification.repository", () => ({
     create: jest.fn(),
     findById: jest.fn(),
     listByUser: jest.fn(),
+    listAll: jest.fn(),
     countUnread: jest.fn(),
     markRead: jest.fn(),
+    markAllRead: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -121,10 +124,15 @@ function makeNotification(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: NOTIFICATION_ID,
     userId: USER_ID,
+    senderId: null,
     title: "New session request",
     message: "Ama Mensah requested a session with you on React Native.",
     type: "SESSION_REQUEST",
     isRead: false,
+    readAt: null,
+    entityId: null,
+    entityType: null,
+    sender: null,
     createdAt: new Date(),
     ...overrides,
   };
@@ -198,5 +206,64 @@ describe("PATCH /api/v1/notifications/:id/read", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.isRead).toBe(true);
+  });
+});
+
+describe("PATCH /api/v1/notifications/read-all", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).patch("/api/v1/notifications/read-all");
+    expect(res.status).toBe(401);
+  });
+
+  it("marks all unread notifications as read", async () => {
+    mockNotificationRepo.markAllRead.mockResolvedValue(5);
+
+    const res = await request(app)
+      .patch("/api/v1/notifications/read-all")
+      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.markedRead).toBe(5);
+    expect(mockNotificationRepo.markAllRead).toHaveBeenCalledWith(USER_ID);
+  });
+});
+
+describe("DELETE /api/v1/notifications/:id", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).delete(`/api/v1/notifications/${NOTIFICATION_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when the notification doesn't exist", async () => {
+    mockNotificationRepo.findById.mockResolvedValue(null);
+
+    const res = await request(app)
+      .delete(`/api/v1/notifications/${NOTIFICATION_ID}`)
+      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when the notification belongs to someone else", async () => {
+    mockNotificationRepo.findById.mockResolvedValue(makeNotification({ userId: OTHER_USER_ID }) as never);
+
+    const res = await request(app)
+      .delete(`/api/v1/notifications/${NOTIFICATION_ID}`)
+      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("deletes the notification", async () => {
+    mockNotificationRepo.findById.mockResolvedValue(makeNotification() as never);
+    mockNotificationRepo.delete.mockResolvedValue(makeNotification() as never);
+
+    const res = await request(app)
+      .delete(`/api/v1/notifications/${NOTIFICATION_ID}`)
+      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe("Notification deleted.");
+    expect(mockNotificationRepo.delete).toHaveBeenCalledWith(NOTIFICATION_ID);
   });
 });

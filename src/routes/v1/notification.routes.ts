@@ -99,3 +99,82 @@ notificationRouter.patch(
   validateRequest({ params: notificationIdParamSchema }),
   notificationController.markRead
 );
+
+/**
+ * @openapi
+ * /notifications/read-all:
+ *   patch:
+ *     summary: Mark all notifications as read
+ *     description: Marks every unread notification for the authenticated user as read.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications marked as read.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         markedRead: { type: integer, example: 5 }
+ *       401:
+ *         description: Not authenticated.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ */
+notificationRouter.patch(
+  "/notifications/read-all",
+  authenticate,
+  notificationController.markAllRead
+);
+
+notificationRouter.get(
+  "/notifications/unread-count",
+  authenticate,
+  notificationController.unreadCount
+);
+
+/**
+ * @openapi
+ * /notifications/{id}:
+ *   delete:
+ *     summary: Delete a notification
+ *     description: Only the notification owner can delete their own notification.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Notification deleted.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/SuccessResponse' }
+ *       403:
+ *         description: This notification belongs to a different user.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ *       404:
+ *         description: Notification not found.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ */
+notificationRouter.delete(
+  "/notifications/:id",
+  authenticate,
+  validateRequest({ params: notificationIdParamSchema }),
+  notificationController.delete
+);

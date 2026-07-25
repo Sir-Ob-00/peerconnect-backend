@@ -136,7 +136,8 @@ function makeUser(id: string, overrides: Partial<Record<string, unknown>> = {}) 
     role: "STUDENT",
     accountStatus: "ACTIVE",
     profileImage: null,
-    isEmailVerified: false,
+    isEmailVerified: true,
+    studentVerified: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -166,10 +167,14 @@ function makeSession(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 beforeEach(() => {
-  // session.service always creates a notification (SESSION_REQUEST or
-  // SESSION_ACCEPTED) as a side effect (Phase 8) — give it a default
-  // resolved value so tests that don't care about notifications
-  // specifically don't have to.
+  jest.clearAllMocks();
+  mockUserRepo.findActiveById.mockImplementation((id: string) => {
+    if ([REQUESTER_ID, RECEIVER_ID, "33333333-3333-3333-3333-333333333333"].includes(id)) {
+      return Promise.resolve(makeUser(id));
+    }
+    return Promise.resolve(null);
+  });
+
   mockNotificationRepo.create.mockResolvedValue({
     id: "notif-1",
     userId: "unused",

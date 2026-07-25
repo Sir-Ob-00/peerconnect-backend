@@ -21,4 +21,22 @@ export const notificationController = {
     const notification = await notificationService.markRead(req.params.id, req.user.id);
     sendSuccess(res, { message: "Notification marked as read.", data: notification });
   }),
+
+  markAllRead: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized("Authentication required.");
+    const result = await notificationService.markAllRead(req.user.id);
+    sendSuccess(res, { message: "All notifications marked as read.", data: result });
+  }),
+
+  unreadCount: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized("Authentication required.");
+    const count = await notificationService.unreadCount(req.user.id);
+    sendSuccess(res, { message: "Unread count retrieved.", data: { count } });
+  }),
+
+  delete: asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+    if (!req.user) throw ApiError.unauthorized("Authentication required.");
+    await notificationService.deleteNotification(req.params.id, req.user.id);
+    sendSuccess(res, { message: "Notification deleted." });
+  }),
 };

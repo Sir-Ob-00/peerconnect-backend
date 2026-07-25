@@ -3,8 +3,8 @@ import { chatController } from "../../controllers/chat.controller";
 import { validateRequest } from "../../middlewares/validateRequest";
 import { authenticate, requireStudent } from "../../middlewares/authenticate";
 import { requireChatMember, requireGroupAdmin } from "../../middlewares/chatAuth.middleware";
-import { uploadChatImage } from "../../middlewares/upload.middleware";
-import { conversationIdParamSchema, listMessagesQuerySchema, directChatSchema, createGroupSchema, addMembersSchema, updateGroupSchema, groupIdParamSchema, groupMemberParamSchema, sendGroupMessageSchema } from "../../validators/chat.validator";
+import { uploadChatImage, uploadChatAttachment } from "../../middlewares/upload.middleware";
+import { conversationIdParamSchema, listMessagesQuerySchema, directChatSchema, createGroupSchema, addMembersSchema, updateGroupSchema, groupIdParamSchema, groupMemberParamSchema, sendGroupMessageSchema, postMessageSchema } from "../../validators/chat.validator";
 
 export const chatRouter = Router();
 
@@ -46,7 +46,7 @@ chatRouter.post(
   "/chat/:conversationId/messages",
   authenticate,
   requireStudent,
-  validateRequest({ params: conversationIdParamSchema }),
+  validateRequest({ params: conversationIdParamSchema, body: postMessageSchema }),
   chatController.postMessage
 );
 
@@ -158,6 +158,8 @@ chatRouter.get(
  *             schema: { $ref: '#/components/schemas/ErrorResponse' }
  */
 chatRouter.post("/chat/upload-image", authenticate, requireStudent, uploadChatImage, chatController.uploadImage);
+
+chatRouter.post("/chat/upload-attachment", authenticate, requireStudent, uploadChatAttachment, chatController.uploadAttachment);
 
 // Group chat routes
 chatRouter.post(

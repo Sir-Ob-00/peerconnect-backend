@@ -6,6 +6,8 @@ interface CreateData {
   senderId: string;
   content?: string | null;
   messageType?: "TEXT" | "IMAGE" | "FILE";
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
 }
 
 interface ListParams {
@@ -27,7 +29,7 @@ export const chatMessageRepository = {
   async listByChatRoom({ chatRoomId, skip, take }: ListParams): Promise<ListResult> {
     const where = { chatRoomId };
     const [items, totalItems] = await Promise.all([
-      prisma.chatMessage.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.chatMessage.findMany({ where, orderBy: { createdAt: "asc" }, skip, take }),
       prisma.chatMessage.count({ where }),
     ]);
     return { items, totalItems };

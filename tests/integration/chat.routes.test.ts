@@ -102,11 +102,13 @@ jest.mock("../../src/utils/cloudinaryUpload.util", () => ({
 import { createApp } from "../../src/app";
 import { conversationRepository } from "../../src/repositories/conversation.repository";
 import { messageRepository } from "../../src/repositories/message.repository";
+import { userRepository } from "../../src/repositories/user.repository";
 import { uploadChatImageBuffer } from "../../src/utils/cloudinaryUpload.util";
 import { signAccessToken } from "../../src/utils/jwt.util";
 
 const mockConversationRepo = conversationRepository as jest.Mocked<typeof conversationRepository>;
 const mockMessageRepo = messageRepository as jest.Mocked<typeof messageRepository>;
+const mockUserRepo = userRepository as jest.Mocked<typeof userRepository>;
 const mockUpload = uploadChatImageBuffer as jest.MockedFunction<typeof uploadChatImageBuffer>;
 
 const app = createApp();
@@ -120,8 +122,36 @@ function tokenFor(userId: string) {
 }
 
 function makeParticipant(id: string) {
-  return { id, firstName: "Ama", lastName: "Mensah", profileImage: null };
+  return { id, firstName: "Ama", lastName: "Mensah", profileImage: null, email: `${id}@st.university.edu.gh` };
 }
+
+function makeUser(id: string) {
+  return {
+    id,
+    firstName: "Ama",
+    lastName: "Mensah",
+    email: `${id}@st.university.edu.gh`,
+    password: "hashed",
+    role: "STUDENT",
+    accountStatus: "ACTIVE",
+    profileImage: null,
+    isEmailVerified: true,
+    studentVerified: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUserRepo.findActiveById.mockImplementation((id: string) => {
+    if ([USER_A, USER_B, OUTSIDER].includes(id)) {
+      return Promise.resolve(makeUser(id));
+    }
+    return Promise.resolve(null);
+  });
+});
 
 function makeConversation(overrides: Partial<Record<string, unknown>> = {}) {
   return {

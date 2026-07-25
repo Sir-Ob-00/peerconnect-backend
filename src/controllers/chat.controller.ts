@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { chatService } from "../services/chat.service";
-import { uploadChatImageBuffer } from "../utils/cloudinaryUpload.util";
+import { uploadChatImageBuffer, uploadDocumentBuffer } from "../utils/cloudinaryUpload.util";
 import { sendSuccess } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ApiError } from "../utils/ApiError";
@@ -32,8 +32,20 @@ export const chatController = {
   // POST /chat/:conversationId/messages (direct conversation message via REST)
   postMessage: asyncHandler(async (req: Request<{ conversationId: string }>, res: Response) => {
     const userId = requireUserId(req);
-    const { content } = req.body as { content?: string };
-    const result = await chatService.sendMessage(userId, { conversationId: req.params.conversationId, content });
+    const { content, value, imageUrl, attachmentUrl, attachmentType } = req.body as {
+      content?: string;
+      value?: string;
+      imageUrl?: string;
+      attachmentUrl?: string;
+      attachmentType?: string;
+    };
+    const result = await chatService.sendMessage(userId, {
+      conversationId: req.params.conversationId,
+      content: content || value,
+      imageUrl,
+      attachmentUrl,
+      attachmentType,
+    });
     sendSuccess(res, { message: "Message sent.", data: { message: result.message, conversationId: result.conversationId } });
   }),
 
@@ -44,6 +56,22 @@ export const chatController = {
     }
     const uploaded = await uploadChatImageBuffer(req.file.buffer);
     sendSuccess(res, { message: "Image uploaded successfully.", data: { imageUrl: uploaded.secureUrl } });
+  }),
+
+  uploadAttachment: asyncHandler(async (req: Request, res: Response) => {
+    requireUserId(req);
+    if (!req.file) {
+      throw ApiError.badRequest('No file provided. Attach one under the "attachment" field.');
+    }
+    const uploaded = await uploadDocumentBuffer(req.file.buffer, req.file.originalname);
+    sendSuccess(res, {
+      message: "File uploaded successfully.",
+      data: {
+        attachmentUrl: uploaded.secureUrl,
+        attachmentType: req.file.mimetype,
+        format: uploaded.format,
+      },
+    });
   }),
 
   // Direct chat helper (POST /chat/direct)
@@ -103,8 +131,8 @@ export const chatController = {
 
   postGroupMessage: asyncHandler(async (req: Request<{ chatId: string }>, res: Response) => {
     const userId = requireUserId(req);
-    const { content } = req.body as { content?: string };
-    const created = await chatService.sendGroupMessage(userId, req.params.chatId, content);
+    const { content, value, attachmentUrl, attachmentType } = req.body as { content?: string; value?: string; attachmentUrl?: string; attachmentType?: string };
+    const created = await chatService.sendGroupMessage(userId, req.params.chatId, content || value, attachmentUrl, attachmentType);
     sendSuccess(res, { message: "Message sent.", data: toChatMessageView(created) });
   }),
 

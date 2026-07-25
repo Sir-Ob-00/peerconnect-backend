@@ -6,6 +6,8 @@ interface CreateMessageData {
   senderId: string;
   content?: string;
   imageUrl?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
 
 interface ListParams {
@@ -31,7 +33,7 @@ export const messageRepository = {
   async listByConversation({ conversationId, skip, take }: ListParams): Promise<ListResult> {
     const where: Prisma.MessageWhereInput = { conversationId };
     const [items, totalItems] = await Promise.all([
-      prisma.message.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.message.findMany({ where, orderBy: { createdAt: "asc" }, skip, take }),
       prisma.message.count({ where }),
     ]);
     return { items, totalItems };
@@ -47,7 +49,7 @@ export const messageRepository = {
 
   async listAll(skip = 0, take = 50) {
     const [items, totalItems] = await Promise.all([
-      prisma.message.findMany({ orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.message.findMany({ orderBy: { createdAt: "asc" }, skip, take }),
       prisma.message.count(),
     ]);
     return { items, totalItems };

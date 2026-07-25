@@ -154,12 +154,12 @@ export function registerChatHandlers(io: Server, socket: Socket): void {
       const parsed = groupRoomSocketSchema.parse(payload as any);
       const { chatId } = parsed;
       const body = payload as any;
-      if (!body || typeof body.content !== "string" || body.content.trim().length === 0) {
-        throw ApiError.badRequest("Message content is required.");
+      if (!body || (!body.content && !body.attachmentUrl)) {
+        throw ApiError.badRequest("Provide message content, a file, or both.");
       }
       // ensure membership
       await chatService.getGroupOrThrow(chatId, userId);
-      const created = await chatService.sendGroupMessage(userId, chatId, body.content);
+      const created = await chatService.sendGroupMessage(userId, chatId, body.content, body.attachmentUrl, body.attachmentType);
 
       const eventBody = { message: {
         id: created.id,
@@ -167,6 +167,8 @@ export function registerChatHandlers(io: Server, socket: Socket): void {
         senderId: created.senderId,
         content: created.content,
         messageType: created.messageType,
+        attachmentUrl: created.attachmentUrl,
+        attachmentType: created.attachmentType,
         isRead: created.isRead,
         createdAt: created.createdAt,
       }, chatId };

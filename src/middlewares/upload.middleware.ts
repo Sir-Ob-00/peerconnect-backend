@@ -3,11 +3,26 @@ import type { Request } from "express";
 import { env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 
-const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
 
-function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
-  if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+function imageFileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
     cb(ApiError.badRequest("Only JPEG, PNG, and WebP images are allowed."));
+    return;
+  }
+  cb(null, true);
+}
+
+function documentFileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+    cb(ApiError.badRequest("Only PDF, Word, and PowerPoint files are allowed."));
     return;
   }
   cb(null, true);
@@ -21,18 +36,25 @@ function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCall
 export const uploadProfilePhoto = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.MAX_PROFILE_PHOTO_SIZE_MB * 1024 * 1024, files: 1 },
-  fileFilter,
+  fileFilter: imageFileFilter,
 }).single("photo");
 
 /** Same constraints as profile photos (image types, memory storage) but its own size limit and field name — chat images are sent under "image", not "photo". */
 export const uploadChatImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.MAX_CHAT_IMAGE_SIZE_MB * 1024 * 1024, files: 1 },
-  fileFilter,
+  fileFilter: imageFileFilter,
 }).single("image");
 
 export const uploadIdPhoto = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.MAX_ID_PHOTO_SIZE_MB * 1024 * 1024, files: 1 },
-  fileFilter,
+  fileFilter: imageFileFilter,
 }).single("idPhoto");
+
+/** Accepts a single document attachment (PDF, Word, PowerPoint) under the "attachment" field. */
+export const uploadChatAttachment = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  fileFilter: documentFileFilter,
+}).single("attachment");

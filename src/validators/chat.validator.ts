@@ -22,11 +22,14 @@ export const sendMessageSocketSchema = z
   .object({
     conversationId: z.string().uuid().optional(),
     receiverId: z.string().uuid().optional(),
-    content: z.string().trim().min(1).max(CHAT_CONSTANTS.CONTENT_MAX_LENGTH).optional(),
+    content: z.string().trim().optional(),
+    value: z.string().trim().optional(),
     imageUrl: z.string().url().optional(),
+    attachmentUrl: z.string().url().optional(),
+    attachmentType: z.string().optional(),
   })
-  .refine((data) => Boolean(data.content) || Boolean(data.imageUrl), {
-    message: "Provide message content, an image, or both.",
+  .refine((data) => (data.content && data.content.trim().length > 0) || (data.value && data.value.trim().length > 0) || Boolean(data.imageUrl) || Boolean(data.attachmentUrl), {
+    message: "Provide message content, an image, a file, or any combination.",
   })
   .refine((data) => Boolean(data.conversationId) || Boolean(data.receiverId), {
     message: "Provide either conversationId (existing conversation) or receiverId (start a new one).",
@@ -46,6 +49,17 @@ export type MarkReadSocketInput = z.infer<typeof markReadSocketSchema>;
 // REST schemas for new group/direct endpoints
 export const directChatSchema = z.object({ userId: z.string().uuid() });
 export type DirectChatInput = z.infer<typeof directChatSchema>;
+
+export const postMessageSchema = z.object({
+  content: z.string().trim().optional(),
+  value: z.string().trim().optional(),
+  imageUrl: z.string().url().optional(),
+  attachmentUrl: z.string().url().optional(),
+  attachmentType: z.string().optional(),
+}).refine((data) => (data.content && data.content.trim().length > 0) || (data.value && data.value.trim().length > 0) || Boolean(data.imageUrl) || Boolean(data.attachmentUrl), {
+  message: "Provide message content, an image, a file, or any combination.",
+});
+export type PostMessageInput = z.infer<typeof postMessageSchema>;
 
 export const createGroupSchema = z.object({
   name: z.string().trim().min(1),
@@ -70,6 +84,13 @@ export type GroupMemberParamInput = z.infer<typeof groupMemberParamSchema>;
 export const groupRoomSocketSchema = z.object({ chatId: z.string().uuid() });
 export type GroupRoomSocketInput = z.infer<typeof groupRoomSocketSchema>;
 
-export const sendGroupMessageSchema = z.object({ content: z.string().trim().min(1) });
+export const sendGroupMessageSchema = z.object({
+  content: z.string().trim().optional(),
+  value: z.string().trim().optional(),
+  attachmentUrl: z.string().url().optional(),
+  attachmentType: z.string().optional(),
+}).refine((data) => (data.content && data.content.trim().length > 0) || (data.value && data.value.trim().length > 0) || Boolean(data.attachmentUrl), {
+  message: "Provide message content, a file, or both.",
+});
 export type SendGroupMessageInput = z.infer<typeof sendGroupMessageSchema>;
 

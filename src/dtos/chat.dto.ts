@@ -14,6 +14,8 @@ export interface MessageView {
   senderId: string;
   content: string | null;
   imageUrl: string | null;
+  attachmentUrl: string | null;
+  attachmentType: string | null;
   isRead: boolean;
   createdAt: Date;
 }
@@ -25,6 +27,8 @@ export function toMessageView(message: Message): MessageView {
     senderId: message.senderId,
     content: message.content,
     imageUrl: message.imageUrl,
+    attachmentUrl: message.attachmentUrl,
+    attachmentType: message.attachmentType,
     isRead: message.isRead,
     createdAt: message.createdAt,
   };
@@ -85,6 +89,8 @@ export interface ChatMessageView {
   senderId: string;
   content?: string | null;
   messageType: string;
+  attachmentUrl: string | null;
+  attachmentType: string | null;
   isRead: boolean;
   createdAt: Date;
 }
@@ -96,6 +102,8 @@ export function toChatMessageView(message: any): ChatMessageView {
     senderId: message.senderId,
     content: message.content,
     messageType: message.messageType,
+    attachmentUrl: message.attachmentUrl,
+    attachmentType: message.attachmentType,
     isRead: message.isRead,
     createdAt: message.createdAt,
   };

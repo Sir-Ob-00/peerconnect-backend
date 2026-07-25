@@ -88,3 +88,40 @@ export function uploadChatImageBuffer(buffer: Buffer): Promise<UploadedImage> {
     Readable.from(buffer).pipe(uploadStream);
   });
 }
+
+export interface UploadedDocument {
+  secureUrl: string;
+  publicId: string;
+  resourceType: string;
+  format: string;
+}
+
+/**
+ * Uploads a document (PDF, Word, PowerPoint, etc.) to Cloudinary as a raw
+ * resource and resolves with the resulting secure URL.
+ */
+export function uploadDocumentBuffer(buffer: Buffer, filename: string): Promise<UploadedDocument> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: env.CLOUDINARY_CHAT_UPLOAD_FOLDER,
+        resource_type: "raw",
+        overwrite: false,
+        filename_override: filename.replace(/\.[^/.]+$/, ""),
+      },
+      (error, result) => {
+        if (error || !result) {
+          return reject(error ?? new Error("Cloudinary document upload failed with no result."));
+        }
+        resolve({
+          secureUrl: result.secure_url,
+          publicId: result.public_id,
+          resourceType: result.resource_type,
+          format: result.format,
+        });
+      }
+    );
+
+    Readable.from(buffer).pipe(uploadStream);
+  });
+}

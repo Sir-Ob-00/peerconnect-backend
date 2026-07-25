@@ -14,6 +14,8 @@ export interface SendMessageInput {
   receiverId?: string;
   content?: string;
   imageUrl?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
 
 export interface SendMessageResult {
@@ -127,8 +129,8 @@ export const chatService = {
       throw ApiError.badRequest("Provide either conversationId or receiverId.");
     }
 
-    if (!input.content && !input.imageUrl) {
-      throw ApiError.badRequest("Provide message content, an image, or both.");
+    if (!input.content && !input.imageUrl && !input.attachmentUrl) {
+      throw ApiError.badRequest("Provide message content, an image, a file, or any combination.");
     }
 
     const created = await messageRepository.create({
@@ -136,6 +138,8 @@ export const chatService = {
       senderId,
       content: input.content,
       imageUrl: input.imageUrl,
+      attachmentUrl: input.attachmentUrl,
+      attachmentType: input.attachmentType,
     });
 
     const receiverId = otherParticipantId(conversation, senderId);
@@ -144,15 +148,21 @@ export const chatService = {
     const preview =
       input.content && input.content.length > 100 ? `${input.content.slice(0, 100)}…` : input.content;
 
-    // In-app + real-time only (no email — see notification.service.ts's
-    // doc comment on why CHAT_MESSAGE deliberately doesn't email). Created
-    // for every message, same as the spec's CHAT_MESSAGE type implies;
-    // deliberately not debounced/deduped (e.g. "only if recipient is
-    // offline") to keep this phase's implementation simple, as instructed.
+    let notificationMessage: string;
+    if (input.attachmentUrl) {
+      notificationMessage = `${senderName} sent you a file.`;
+    } else if (input.imageUrl) {
+      notificationMessage = `${senderName} sent you an image.`;
+    } else if (preview) {
+      notificationMessage = `${senderName}: ${preview}`;
+    } else {
+      notificationMessage = `${senderName} sent you a message.`;
+    }
+
     await notificationService.createNotification({
       userId: receiverId,
       title: "New message",
-      message: preview ? `${senderName}: ${preview}` : `${senderName} sent you an image.`,
+      message: notificationMessage,
       type: "CHAT_MESSAGE",
     });
 
@@ -284,24 +294,26 @@ export const chatService = {
     return { success: true };
   },
 
-  async sendGroupMessage(senderId: string, chatRoomId: string, content?: string) {
-    if (!content || content.trim().length === 0) throw ApiError.badRequest("Message content is required.");
+  async sendGroupMessage(senderId: string, chatRoomId: string, content?: string, attachmentUrl?: string, attachmentType?: string) {
+    if (!content && !attachmentUrl) throw ApiError.badRequest("Provide message content, a file, or both.");
     const member = await chatMemberRepository.findMember(chatRoomId, senderId);
     if (!member) throw ApiError.forbidden("You are not a member of this group.");
 
-    const created = await chatMessageRepository.create({ chatRoomId, senderId, content, messageType: "TEXT" });
+    const messageType: "TEXT" | "FILE" = attachmentUrl ? "FILE" : "TEXT";
+
+    const created = await chatMessageRepository.create({ chatRoomId, senderId, content, messageType, attachmentUrl, attachmentType });
 
     // notify other members
     const members = await chatMemberRepository.listMembers(chatRoomId);
     const senderUser = await userRepository.findActiveById(senderId);
-    const preview = content.length > 100 ? `${content.slice(0, 100)}…` : content;
+    const preview = content && content.length > 100 ? `${content.slice(0, 100)}…` : content;
     const promises = members
       .filter((m) => m.userId !== senderId)
       .map((m) =>
         notificationService.createNotification({
           userId: m.userId,
           title: `New group message in ${member.chatRoomId}`,
-          message: senderUser ? `${senderUser.firstName} ${senderUser.lastName}: ${preview}` : preview,
+          message: senderUser ? `${senderUser.firstName} ${senderUser.lastName}: ${preview || "sent a file"}` : preview || "sent a file",
           type: "CHAT_MESSAGE",
         })
       );
