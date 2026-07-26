@@ -29,12 +29,11 @@ async function sendEmail(input: SendEmailInput): Promise<void> {
 
       if (env.isDevelopment) {
         const previewUrl = nodemailer.getTestMessageUrl(info);
-        logger.info(
-          `Email sent successfully\n` +
-            `Recipient: ${input.to}\n` +
-            `Message ID: ${info.messageId ?? "N/A"}\n` +
-            `Ethereal Preview URL: ${previewUrl || "N/A"}`
-        );
+        if (previewUrl) {
+          logger.info(`[EMAIL] Ethereal Preview: ${previewUrl}`);
+        } else {
+          logger.info(`[EMAIL] Ethereal Preview: Not available`);
+        }
       }
       return;
     } catch (err) {
@@ -62,6 +61,10 @@ export const emailService = {
   sendEmail,
 
   async sendVerificationOtp(to: string, otp: string): Promise<void> {
+    if (env.isDevelopment) {
+      logger.info(`[EMAIL] OTP generated for: ${to}`);
+      logger.info(`[EMAIL] OTP: ${otp}`);
+    }
     const subject = "PeerConnect Student Verification OTP";
     const html = baseTemplate(
       "Verify your email",
