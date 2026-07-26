@@ -41,6 +41,7 @@ export const adminAnnouncementsQuerySchema = paginationQuerySchema.extend({
 export const adminNotificationsQuerySchema = paginationQuerySchema.extend({ userId: z.string().uuid().optional() });
 export const adminSettingsQuerySchema = paginationQuerySchema.extend({ category: z.string().optional() });
 export const adminAdminsQuerySchema = paginationQuerySchema.extend({ search: z.string().optional() });
+export const adminSuspendStudentSchema = z.object({ reason: z.string().max(500).optional() });
 export const adminChatsQuerySchema = paginationQuerySchema.extend({ type: z.string().optional() });
 export const adminStudyGroupsQuerySchema = paginationQuerySchema.extend({ search: z.string().optional() });
 export const adminAnalyticsQuerySchema = paginationQuerySchema.extend({

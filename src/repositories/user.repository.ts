@@ -49,6 +49,16 @@ export const userRepository = {
     });
   },
 
+  suspend(id: string, reason?: string): Promise<User> {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        accountStatus: "SUSPENDED",
+        adminNotes: reason,
+      },
+    });
+  },
+
   async findMany(filters: {
     search?: string;
     role?: string;

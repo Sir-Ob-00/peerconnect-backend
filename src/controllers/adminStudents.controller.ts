@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { sendSuccess } from "../utils/ApiResponse";
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
+import { refreshTokenRepository } from "../repositories/refreshToken.repository";
 import { ApiError } from "../utils/ApiError";
 import { prisma } from "../config/database";
 import type { AdminStudentsQuery } from "../validators/admin.validator";
@@ -232,5 +233,30 @@ export const adminStudentsController = {
         },
       },
     });
+  }),
+
+  suspend: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { reason } = req.body as { reason?: string };
+
+    const user = await userRepository.findById(id);
+    if (!user || user.role !== "STUDENT") throw ApiError.notFound("Student not found.");
+
+    await refreshTokenRepository.revokeAllForUser(user.id);
+
+    const updated = await userRepository.suspend(user.id, reason?.trim());
+    sendSuccess(res, { message: "Student suspended.", data: updated });
+  }),
+
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const user = await userRepository.findById(id);
+    if (!user || user.role !== "STUDENT") throw ApiError.notFound("Student not found.");
+
+    await refreshTokenRepository.revokeAllForUser(user.id);
+
+    const deleted = await userRepository.softDelete(user.id);
+    sendSuccess(res, { message: "Student deleted.", data: deleted });
   }),
 };
