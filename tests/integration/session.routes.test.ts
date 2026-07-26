@@ -155,6 +155,8 @@ function makeSession(overrides: Partial<Record<string, unknown>> = {}) {
     requesterId: REQUESTER_ID,
     receiverId: RECEIVER_ID,
     skill: "React Native",
+    time: "3:00 PM",
+    duration: "1 Hour",
     message: null,
     status: "PENDING",
     scheduledDate: new Date(Date.now() + 60_000),
@@ -196,7 +198,7 @@ describe("POST /api/v1/sessions", () => {
     const res = await request(app)
       .post("/api/v1/sessions")
       .set("Authorization", `Bearer ${tokenFor(REQUESTER_ID)}`)
-      .send({ receiverId: RECEIVER_ID, skill: "React", scheduledDate: "2020-01-01T00:00:00Z" });
+      .send({ receiverId: RECEIVER_ID, skill: "React", time: "3:00 PM", duration: "1 Hour", scheduledDate: "2020-01-01T00:00:00Z" });
     expect(res.status).toBe(422);
   });
 
@@ -207,6 +209,8 @@ describe("POST /api/v1/sessions", () => {
       .send({
         receiverId: REQUESTER_ID,
         skill: "React",
+        time: "3:00 PM",
+        duration: "1 Hour",
         scheduledDate: new Date(Date.now() + 60_000).toISOString(),
       });
     expect(res.status).toBe(400);
@@ -222,6 +226,8 @@ describe("POST /api/v1/sessions", () => {
       .send({
         receiverId: RECEIVER_ID,
         skill: "React Native",
+        time: "3:00 PM",
+        duration: "1 Hour",
         scheduledDate: new Date(Date.now() + 60_000).toISOString(),
       });
 

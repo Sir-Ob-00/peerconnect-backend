@@ -1,5 +1,6 @@
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
+import { peerRepository } from "../repositories/peer.repository";
 import { sessionRepository } from "../repositories/session.repository";
 import { reviewRepository } from "../repositories/review.repository";
 import { messageRepository } from "../repositories/message.repository";
@@ -20,6 +21,7 @@ export interface ProfileStats {
   averageRating: number;
   totalReviews: number;
   totalMessages: number;
+  connectionsCount: number;
 }
 
 export interface MyProfileResult {
@@ -90,16 +92,18 @@ export const studentProfileService = {
   },
 
   async getStats(userId: string): Promise<ProfileStats> {
-    const [sessionsCompleted, sessionsTotal, ratingSummary, totalMessages] = await Promise.all([
+    const [sessionsCompleted, sessionsTotal, ratingSummary, totalMessages, connectionsCount] = await Promise.all([
       sessionRepository.count({
         OR: [{ requesterId: userId }, { receiverId: userId }],
         status: "COMPLETED" as any,
       }),
       sessionRepository.count({
         OR: [{ requesterId: userId }, { receiverId: userId }],
+        status: { notIn: ["REJECTED", "CANCELLED"] as any },
       }),
       reviewRepository.getRatingSummary(userId),
       messageRepository.count({ senderId: userId }),
+      peerRepository.countAcceptedConnections(userId),
     ]);
 
     return {
@@ -108,6 +112,7 @@ export const studentProfileService = {
       averageRating: ratingSummary.averageRating,
       totalReviews: ratingSummary.totalReviews,
       totalMessages,
+      connectionsCount,
     };
   },
 };

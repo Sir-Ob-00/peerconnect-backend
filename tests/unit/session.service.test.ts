@@ -82,6 +82,8 @@ function makeSession(overrides: Partial<Record<string, unknown>> = {}) {
     requesterId: REQUESTER_ID,
     receiverId: RECEIVER_ID,
     skill: "React Native",
+    time: "3:00 PM",
+    duration: "1 Hour",
     message: null,
     status: "PENDING",
     scheduledDate: new Date(Date.now() + 60_000),
@@ -115,6 +117,8 @@ describe("sessionService.requestSession", () => {
   const validInput = {
     receiverId: RECEIVER_ID,
     skill: "React Native",
+    time: "3:00 PM",
+    duration: "1 Hour",
     message: "Can you help?",
     scheduledDate: new Date(Date.now() + 60_000),
   };
@@ -138,7 +142,7 @@ describe("sessionService.requestSession", () => {
     const result = await sessionService.requestSession(REQUESTER_ID, validInput);
 
     expect(mockSessionRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ requesterId: REQUESTER_ID, receiverId: RECEIVER_ID, skill: "React Native" })
+      expect.objectContaining({ requesterId: REQUESTER_ID, receiverId: RECEIVER_ID, skill: "React Native", time: "3:00 PM", duration: "1 Hour" })
     );
     expect(result.status).toBe("PENDING");
   });

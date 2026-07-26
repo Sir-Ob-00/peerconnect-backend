@@ -11,6 +11,8 @@ export interface SessionParticipant {
 export interface SessionView {
   id: string;
   skill: string;
+  time: string | null;
+  duration: string | null;
   message: string | null;
   status: string;
   scheduledDate: Date;
@@ -28,6 +30,8 @@ export function toSessionView(session: SessionWithParticipants): SessionView {
   return {
     id: session.id,
     skill: session.skill,
+    time: session.time,
+    duration: session.duration,
     message: session.message,
     status: session.status,
     scheduledDate: session.scheduledDate,

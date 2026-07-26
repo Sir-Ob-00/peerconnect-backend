@@ -205,6 +205,8 @@ model Session {
   receiverId    String
   receiver      User          @relation("SessionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   skill         String
+  time          String?
+  duration      String?
   message       String?
   status        SessionStatus @default(PENDING)
   scheduledDate DateTime

@@ -146,6 +146,17 @@ export const peerRepository = {
     return connections.map((c) => (c.requesterId === userId ? c.receiverId : c.requesterId));
   },
 
+  async countAcceptedConnections(userId: string): Promise<number> {
+    return prisma.connection.count({
+      where: {
+        OR: [
+          { requesterId: userId, status: "ACCEPTED" },
+          { receiverId: userId, status: "ACCEPTED" },
+        ],
+      },
+    });
+  },
+
   async findBlockedUsers(userId: string): Promise<string[]> {
     const blocks = await prisma.blockedUser.findMany({
       where: { blockerId: userId },

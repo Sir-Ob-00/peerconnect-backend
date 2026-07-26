@@ -57,6 +57,7 @@ jest.mock("../../src/repositories/session.repository", () => ({
     findById: jest.fn(),
     list: jest.fn(),
     updateStatus: jest.fn(),
+    count: jest.fn(),
   },
 }));
 
@@ -102,16 +103,42 @@ jest.mock("../../src/repositories/notification.repository", () => ({
   },
 }));
 
+jest.mock("../../src/repositories/peer.repository", () => ({
+  peerRepository: {
+    countAcceptedConnections: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/review.repository", () => ({
+  reviewRepository: {
+    getRatingSummary: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/message.repository", () => ({
+  messageRepository: {
+    count: jest.fn(),
+  },
+}));
+
 
 import { createApp } from "../../src/app";
 import { userRepository } from "../../src/repositories/user.repository";
 import { studentProfileRepository } from "../../src/repositories/studentProfile.repository";
 import { uploadImageBuffer } from "../../src/utils/cloudinaryUpload.util";
 import { signAccessToken } from "../../src/utils/jwt.util";
+import { sessionRepository } from "../../src/repositories/session.repository";
+import { peerRepository } from "../../src/repositories/peer.repository";
+import { reviewRepository } from "../../src/repositories/review.repository";
+import { messageRepository } from "../../src/repositories/message.repository";
 
 const mockUserRepo = userRepository as jest.Mocked<typeof userRepository>;
 const mockProfileRepo = studentProfileRepository as jest.Mocked<typeof studentProfileRepository>;
 const mockUpload = uploadImageBuffer as jest.MockedFunction<typeof uploadImageBuffer>;
+const mockSessionRepo = sessionRepository as jest.Mocked<typeof sessionRepository>;
+const mockPeerRepo = peerRepository as jest.Mocked<typeof peerRepository>;
+const mockReviewRepo = reviewRepository as jest.Mocked<typeof reviewRepository>;
+const mockMessageRepo = messageRepository as jest.Mocked<typeof messageRepository>;
 
 const app = createApp();
 const USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -282,5 +309,37 @@ describe("GET /api/v1/profile/:id", () => {
     mockUserRepo.findActiveById.mockResolvedValue(null);
     const res = await request(app).get(`/api/v1/profile/${OTHER_USER_ID}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/v1/profile/me/stats", () => {
+  it("requires authentication", async () => {
+    const res = await request(app).get("/api/v1/profile/me/stats");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns computed profile stats", async () => {
+    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+    mockProfileRepo.findByUserId.mockResolvedValue(makeProfile() as never);
+    mockSessionRepo.count
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(7);
+    mockReviewRepo.getRatingSummary.mockResolvedValue({ averageRating: 4.5, totalReviews: 10 } as never);
+    mockMessageRepo.count.mockResolvedValue(42);
+    mockPeerRepo.countAcceptedConnections.mockResolvedValue(5);
+
+    const res = await request(app)
+      .get("/api/v1/profile/me/stats")
+      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      sessionsCompleted: 3,
+      sessionsTotal: 7,
+      averageRating: 4.5,
+      totalReviews: 10,
+      totalMessages: 42,
+      connectionsCount: 5,
+    });
   });
 });

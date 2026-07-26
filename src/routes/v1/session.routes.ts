@@ -24,11 +24,13 @@ export const sessionRouter = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [receiverId, skill, scheduledDate]
+ *             required: [receiverId, skill, time, duration, scheduledDate]
  *             properties:
  *               receiverId: { type: string, format: uuid }
- *               skill: { type: string, example: "React Native" }
- *               message: { type: string, example: "Could you help me with navigation?" }
+ *               skill: { type: string, example: "React Native Navigation" }
+ *               time: { type: string, example: "3:00 PM" }
+ *               duration: { type: string, example: "1 Hour" }
+ *               message: { type: string, example: "I want to understand Stack Navigation and Tab Navigation." }
  *               scheduledDate: { type: string, format: date-time }
  *     responses:
  *       201:

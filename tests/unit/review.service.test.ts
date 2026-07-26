@@ -39,6 +39,8 @@ function makeSession(overrides: Partial<Record<string, unknown>> = {}) {
     requesterId: REQUESTER_ID,
     receiverId: RECEIVER_ID,
     skill: "React Native",
+    time: "3:00 PM",
+    duration: "1 Hour",
     message: null,
     status: "COMPLETED",
     scheduledDate: new Date(),

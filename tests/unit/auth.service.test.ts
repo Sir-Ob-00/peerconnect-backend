@@ -45,16 +45,38 @@ jest.mock("../../src/repositories/studentProfile.repository", () => ({
   },
 }));
 
+jest.mock("../../src/repositories/studentCourse.repository", () => ({
+  studentCourseRepository: {
+    findByUserAndType: jest.fn(),
+    add: jest.fn(),
+    remove: jest.fn(),
+    has: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/studentSkill.repository", () => ({
+  studentSkillRepository: {
+    findByUserAndType: jest.fn(),
+    add: jest.fn(),
+    remove: jest.fn(),
+    has: jest.fn(),
+  },
+}));
+
 import { authService } from "../../src/services/auth.service";
 import { userRepository } from "../../src/repositories/user.repository";
 import { refreshTokenRepository } from "../../src/repositories/refreshToken.repository";
 import { passwordResetTokenRepository } from "../../src/repositories/passwordResetToken.repository";
 import { studentProfileRepository } from "../../src/repositories/studentProfile.repository";
+import { studentCourseRepository } from "../../src/repositories/studentCourse.repository";
+import { studentSkillRepository } from "../../src/repositories/studentSkill.repository";
 
 const mockUserRepo = userRepository as jest.Mocked<typeof userRepository>;
 const mockRefreshRepo = refreshTokenRepository as jest.Mocked<typeof refreshTokenRepository>;
 const mockResetRepo = passwordResetTokenRepository as jest.Mocked<typeof passwordResetTokenRepository>;
 const mockProfileRepo = studentProfileRepository as jest.Mocked<typeof studentProfileRepository>;
+const mockCourseRepo = studentCourseRepository as jest.Mocked<typeof studentCourseRepository>;
+const mockSkillRepo = studentSkillRepository as jest.Mocked<typeof studentSkillRepository>;
 
 function makeUser(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -346,16 +368,34 @@ describe("authService.changePassword", () => {
 });
 
 describe("authService.getMe", () => {
-  it("throws 404 when the user doesn't exist", async () => {
-    mockUserRepo.findActiveById.mockResolvedValue(null);
-    await expect(authService.getMe("missing-id")).rejects.toMatchObject({ statusCode: 404 });
-  });
+   it("throws 404 when the user doesn't exist", async () => {
+     mockUserRepo.findActiveById.mockResolvedValue(null);
+     await expect(authService.getMe("missing-id")).rejects.toMatchObject({ statusCode: 404 });
+   });
 
-  it("returns a public user without the password field", async () => {
-    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
-    mockProfileRepo.findByUserId.mockResolvedValue(null);
-    const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
-    expect(result).not.toHaveProperty("password");
-    expect(result.email).toBe("ama.mensah@st.university.edu.gh");
-  });
-});
+   it("returns a public user without the password field", async () => {
+     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+     mockProfileRepo.findByUserId.mockResolvedValue(null);
+     mockCourseRepo.findByUserAndType.mockResolvedValue([]);
+     mockSkillRepo.findByUserAndType.mockResolvedValue([]);
+     const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
+     expect(result).not.toHaveProperty("password");
+     expect(result.email).toBe("ama.mensah@st.university.edu.gh");
+   });
+
+   it("includes courses and skills in the response", async () => {
+     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+     mockProfileRepo.findByUserId.mockResolvedValue(null);
+     mockCourseRepo.findByUserAndType
+       .mockResolvedValueOnce([{ id: "course-1", courseId: "c1", course: { id: "c1", name: "Math 101", code: "MATH101", universityId: "u1", custom: false, isActive: true }, type: "LEARNING", createdAt: new Date() }])
+       .mockResolvedValueOnce([]);
+     mockSkillRepo.findByUserAndType
+       .mockResolvedValueOnce([{ id: "skill-1", skillId: "s1", skill: { id: "s1", name: "React", category: "Frontend", isActive: true }, type: "LEARNING", createdAt: new Date() }])
+       .mockResolvedValueOnce([]);
+     const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
+     expect(result.courses).toHaveLength(1);
+     expect(result.courses[0].course.name).toBe("Math 101");
+     expect(result.skills).toHaveLength(1);
+     expect(result.skills[0].skill.name).toBe("React");
+   });
+ });

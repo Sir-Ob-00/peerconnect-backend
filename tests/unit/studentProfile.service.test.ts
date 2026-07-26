@@ -17,14 +17,46 @@ jest.mock("../../src/utils/cloudinaryUpload.util", () => ({
   uploadImageBuffer: jest.fn(),
 }));
 
+jest.mock("../../src/repositories/message.repository", () => ({
+  messageRepository: {
+    count: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/peer.repository", () => ({
+  peerRepository: {
+    countAcceptedConnections: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/session.repository", () => ({
+  sessionRepository: {
+    count: jest.fn(),
+  },
+}));
+
+jest.mock("../../src/repositories/review.repository", () => ({
+  reviewRepository: {
+    getRatingSummary: jest.fn(),
+  },
+}));
+
 import { studentProfileService } from "../../src/services/studentProfile.service";
 import { userRepository } from "../../src/repositories/user.repository";
 import { studentProfileRepository } from "../../src/repositories/studentProfile.repository";
 import { uploadImageBuffer } from "../../src/utils/cloudinaryUpload.util";
+import { messageRepository } from "../../src/repositories/message.repository";
+import { peerRepository } from "../../src/repositories/peer.repository";
+import { sessionRepository } from "../../src/repositories/session.repository";
+import { reviewRepository } from "../../src/repositories/review.repository";
 
 const mockUserRepo = userRepository as jest.Mocked<typeof userRepository>;
 const mockProfileRepo = studentProfileRepository as jest.Mocked<typeof studentProfileRepository>;
 const mockUpload = uploadImageBuffer as jest.MockedFunction<typeof uploadImageBuffer>;
+const mockMessageRepo = messageRepository as jest.Mocked<typeof messageRepository>;
+const mockPeerRepo = peerRepository as jest.Mocked<typeof peerRepository>;
+const mockSessionRepo = sessionRepository as jest.Mocked<typeof sessionRepository>;
+const mockReviewRepo = reviewRepository as jest.Mocked<typeof reviewRepository>;
 
 const USER_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -173,5 +205,47 @@ describe("studentProfileService.getPublicProfile", () => {
     expect(result).not.toHaveProperty("accountStatus");
     expect(result.department).toBe("Mathematics");
     expect(result.firstName).toBe("Ama");
+  });
+});
+
+describe("studentProfileService.getStats", () => {
+  it("returns computed stats excluding rejected and cancelled sessions from total", async () => {
+    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+    mockProfileRepo.findByUserId.mockResolvedValue(makeProfile() as never);
+    mockSessionRepo.count
+      .mockResolvedValueOnce(3) // sessionsCompleted
+      .mockResolvedValueOnce(7) // sessionsTotal
+      .mockResolvedValueOnce(0);
+    mockReviewRepo.getRatingSummary.mockResolvedValue({ averageRating: 4.5, totalReviews: 10 } as never);
+    mockMessageRepo.count.mockResolvedValue(42);
+    mockPeerRepo.countAcceptedConnections.mockResolvedValue(5);
+
+    const result = await studentProfileService.getStats(USER_ID);
+
+    expect(result).toEqual({
+      sessionsCompleted: 3,
+      sessionsTotal: 7,
+      averageRating: 4.5,
+      totalReviews: 10,
+      totalMessages: 42,
+      connectionsCount: 5,
+    });
+  });
+
+  it("returns zero review stats cleanly", async () => {
+    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+    mockProfileRepo.findByUserId.mockResolvedValue(makeProfile() as never);
+    mockSessionRepo.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
+    mockReviewRepo.getRatingSummary.mockResolvedValue({ averageRating: 0, totalReviews: 0 } as never);
+    mockMessageRepo.count.mockResolvedValue(0);
+    mockPeerRepo.countAcceptedConnections.mockResolvedValue(0);
+
+    const result = await studentProfileService.getStats(USER_ID);
+
+    expect(result.averageRating).toBe(0);
+    expect(result.totalReviews).toBe(0);
   });
 });

@@ -591,6 +591,7 @@ function toCourseDTO(c: any) {
     universityId: c.universityId,
     departmentId: c.departmentId,
     levelId: c.levelId,
+    programmeId: c.programmeId,
     custom: c.custom,
     isActive: c.isActive,
   };

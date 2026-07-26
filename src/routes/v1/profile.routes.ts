@@ -181,3 +181,19 @@ profileRouter.post("/profile/photo", authenticate, uploadProfilePhoto, studentPr
  *             schema: { $ref: '#/components/schemas/ErrorResponse' }
  */
 profileRouter.get("/profile/:id", validateRequest({ params: uuidParamSchema }), studentProfileController.getById);
+
+/**
+ * @openapi
+ * /profile/me/stats:
+ *   get:
+ *     summary: Get the current user's profile statistics
+ *     tags: [Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       401:
+ *         description: Not authenticated.
+ *         content:
+ *           schema: { $ref: '#/components/schemas/ErrorResponse' }
+ */
+profileRouter.get("/profile/me/stats", authenticate, studentProfileController.getStats);

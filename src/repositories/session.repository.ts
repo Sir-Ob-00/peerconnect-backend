@@ -23,6 +23,8 @@ interface CreateSessionData {
   requesterId: string;
   receiverId: string;
   skill: string;
+  time: string;
+  duration: string;
   message?: string;
   scheduledDate: Date;
 }

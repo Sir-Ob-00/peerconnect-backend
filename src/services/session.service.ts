@@ -44,6 +44,8 @@ export const sessionService = {
       requesterId,
       receiverId: input.receiverId,
       skill: input.skill,
+      time: input.time,
+      duration: input.duration,
       message: input.message,
       scheduledDate: input.scheduledDate,
     });

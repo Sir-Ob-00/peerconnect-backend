@@ -8,6 +8,16 @@ export const createSessionSchema = z.object({
     .trim()
     .min(1, "Skill is required")
     .max(SESSION_CONSTANTS.SKILL_MAX_LENGTH, `Skill must be at most ${SESSION_CONSTANTS.SKILL_MAX_LENGTH} characters`),
+  time: z
+    .string()
+    .trim()
+    .min(1, "Time is required")
+    .max(SESSION_CONSTANTS.TIME_MAX_LENGTH, `Time must be at most ${SESSION_CONSTANTS.TIME_MAX_LENGTH} characters`),
+  duration: z
+    .string()
+    .trim()
+    .min(1, "Duration is required")
+    .max(SESSION_CONSTANTS.DURATION_MAX_LENGTH, `Duration must be at most ${SESSION_CONSTANTS.DURATION_MAX_LENGTH} characters`),
   message: z.string().trim().max(SESSION_CONSTANTS.MESSAGE_MAX_LENGTH).optional(),
   scheduledDate: z.coerce.date({
     errorMap: () => ({ message: "scheduledDate must be a valid date" }),

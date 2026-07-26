@@ -153,17 +153,17 @@ export const peerService = {
   },
 
   async listConnections(currentUserId: string): Promise<ConnectionView[]> {
-    const connections = await peerRepository.findAcceptedConnections(currentUserId);
-    const usersMap = await peerRepository.findByIds([currentUserId, ...connections]);
+    const peerIds = await peerRepository.findAcceptedConnections(currentUserId);
+    const usersMap = await peerRepository.findByIds([currentUserId, ...peerIds]);
 
-    return connections.map((peerId) => {
+    return peerIds.map((peerId) => {
       const other = usersMap.get(peerId);
       if (!other) return null;
       return {
         id: `conn-${peerId}`,
         requesterId: currentUserId,
         receiverId: peerId,
-        status: "connected" as any,
+        status: "connected" as ConnectionStatus,
         createdAt: other.createdAt.toISOString(),
         updatedAt: other.updatedAt.toISOString(),
         otherUser: {

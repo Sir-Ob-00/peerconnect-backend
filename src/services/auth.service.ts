@@ -2,6 +2,8 @@ import crypto from "crypto";
 import type { User } from "@prisma/client";
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
+import { studentCourseRepository } from "../repositories/studentCourse.repository";
+import { studentSkillRepository } from "../repositories/studentSkill.repository";
 import { refreshTokenRepository } from "../repositories/refreshToken.repository";
 import { passwordResetTokenRepository } from "../repositories/passwordResetToken.repository";
 import { emailVerificationTokenRepository } from "../repositories/emailVerificationToken.repository";
@@ -10,6 +12,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/
 import { generateSecureToken, hashToken } from "../utils/token.util";
 import { ApiError } from "../utils/ApiError";
 import { toPublicUser, type PublicUser } from "../dtos/user.dto";
+import { toCourseDTO, toSkillDTO } from "../dtos/onboarding.dto";
 import { env } from "../config/env";
 import { logger } from "../config/logger";
 import { AUTH_CONSTANTS } from "../constants/auth.constants";
@@ -24,6 +27,35 @@ interface AuthResult {
   user: PublicUser;
   accessToken: string;
   refreshToken: string;
+}
+
+interface MeCourse {
+  id: string;
+  courseId: string;
+  course: {
+    id: string;
+    name: string;
+    code: string | null;
+    universityId: string;
+    departmentId: string | null;
+    levelId: string | null;
+    programmeId: string | null;
+    custom: boolean;
+    isActive: boolean;
+  };
+  type: string;
+}
+
+interface MeSkill {
+  id: string;
+  skillId: string;
+  skill: {
+    id: string;
+    name: string;
+    category: string | null;
+    isActive: boolean;
+  };
+  type: string;
 }
 
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password.";
@@ -216,12 +248,30 @@ export const authService = {
     await refreshTokenRepository.revokeAllForUser(user.id);
   },
 
-  async getMe(userId: string): Promise<PublicUser & { university?: string | null; department?: string | null; programme?: string | null; level?: string | null; avatarUrl?: string | null }> {
+  async getMe(userId: string): Promise<PublicUser & { university?: string | null; department?: string | null; programme?: string | null; level?: string | null; avatarUrl?: string | null; courses: MeCourse[]; skills: MeSkill[] }> {
     const user = await userRepository.findActiveById(userId);
     if (!user) {
       throw ApiError.notFound("User not found.");
     }
     const profile = await studentProfileRepository.findByUserId(userId);
+    const [learningCourses, helpCourses, learningSkills, helpSkills] = await Promise.all([
+      studentCourseRepository.findByUserAndType(userId, "LEARNING"),
+      studentCourseRepository.findByUserAndType(userId, "HELP"),
+      studentSkillRepository.findByUserAndType(userId, "LEARNING"),
+      studentSkillRepository.findByUserAndType(userId, "HELP"),
+    ]);
+    const courses = [...learningCourses, ...helpCourses].map((sc) => ({
+      id: sc.id,
+      courseId: sc.courseId,
+      course: toCourseDTO(sc.course),
+      type: sc.type,
+    }));
+    const skills = [...learningSkills, ...helpSkills].map((ss) => ({
+      id: ss.id,
+      skillId: ss.skillId,
+      skill: toSkillDTO(ss.skill),
+      type: ss.type,
+    }));
     return {
       ...toPublicUser(user),
       university: profile?.university ?? null,
@@ -229,6 +279,8 @@ export const authService = {
       programme: profile?.programme ?? null,
       level: profile?.level ?? null,
       avatarUrl: profile?.profilePhoto ?? null,
+      courses,
+      skills,
     };
   },
 
