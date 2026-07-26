@@ -17,25 +17,34 @@ interface SendEmailInput {
  * notification email fails to send). Failures are logged, not raised.
  */
 async function sendEmail(input: SendEmailInput): Promise<void> {
-  try {
-    const info = await mailTransporter.sendMail({
-      from: env.EMAIL_FROM,
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-    });
+  const maxAttempts = 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const info = await mailTransporter.sendMail({
+        from: env.EMAIL_FROM,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+      });
 
-    if (env.isDevelopment) {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      logger.info(
-        `Email sent successfully\n` +
-          `Recipient: ${input.to}\n` +
-          `Message ID: ${info.messageId ?? "N/A"}\n` +
-          `Ethereal Preview URL: ${previewUrl || "N/A"}`
+      if (env.isDevelopment) {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        logger.info(
+          `Email sent successfully\n` +
+            `Recipient: ${input.to}\n` +
+            `Message ID: ${info.messageId ?? "N/A"}\n` +
+            `Ethereal Preview URL: ${previewUrl || "N/A"}`
+        );
+      }
+      return;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logger.error(
+        `Failed to send email to ${input.to} (attempt ${attempt}/${maxAttempts}): ${message}`
       );
+      if (attempt === maxAttempts) break;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-  } catch (err) {
-    logger.error(`Failed to send email to ${input.to}: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
 }
 

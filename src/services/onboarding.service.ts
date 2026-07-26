@@ -1,4 +1,5 @@
 import { ApiError } from "../utils/ApiError";
+import { Prisma } from "@prisma/client";
 import { userRepository } from "../repositories/user.repository";
 import { studentProfileRepository } from "../repositories/studentProfile.repository";
 import { universityRepository } from "../repositories/university.repository";
@@ -248,10 +249,48 @@ export const onboardingService = {
     if (!universityId) {
       const profile = await studentProfileRepository.findByUserId(userId);
       universityId = profile?.universityId || null;
+
+      if (!universityId && profile?.university) {
+        const existing = await universityRepository.findByName(profile.university);
+        if (existing) {
+          universityId = existing.id;
+        } else {
+          const code = profile.university.trim().slice(0, 10).toUpperCase().replace(/\s+/g, "-");
+          try {
+            const created = await universityRepository.create({
+              name: profile.university.trim(),
+              code,
+              isActive: true,
+            } as any);
+            universityId = created.id;
+          } catch (err) {
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+              const duplicate = await universityRepository.findByCode(code);
+              if (duplicate) {
+                universityId = duplicate.id;
+              } else {
+                throw ApiError.badRequest("University context is required to create a custom course.");
+              }
+            } else {
+              throw err;
+            }
+          }
+        }
+      }
+
+      if (!universityId && user.email) {
+        const domain = user.email.split("@")[1];
+        if (domain) {
+          const inferred = await universityRepository.findByDomainHint(domain);
+          if (inferred) {
+            universityId = inferred.id;
+          }
+        }
+      }
     }
 
     if (!universityId) {
-      throw ApiError.badRequest("University context is required to create a custom course.");
+      throw ApiError.badRequest("University context is required to create a custom course. Please complete your academic profile first.");
     }
 
     const course = await courseRepository.create({

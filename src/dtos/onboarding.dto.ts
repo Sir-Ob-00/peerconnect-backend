@@ -38,6 +38,7 @@ export interface CourseDTO {
   universityId: string;
   departmentId: string | null;
   levelId: string | null;
+  programmeId: string | null;
   custom: boolean;
   isActive: boolean;
 }
@@ -139,6 +140,7 @@ export function toCourseDTO(c: Course): CourseDTO {
     universityId: c.universityId,
     departmentId: c.departmentId,
     levelId: c.levelId,
+    programmeId: c.programmeId,
     custom: c.custom,
     isActive: c.isActive,
   };

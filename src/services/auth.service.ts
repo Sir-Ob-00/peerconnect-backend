@@ -266,12 +266,27 @@ export const authService = {
       course: toCourseDTO(sc.course),
       type: sc.type,
     }));
-    const skills = [...learningSkills, ...helpSkills].map((ss) => ({
+    const skillNames = new Set(learningSkills.concat(helpSkills).map((s) => s.skill.name));
+    const studentSkills = [...learningSkills, ...helpSkills].map((ss) => ({
       id: ss.id,
       skillId: ss.skillId,
       skill: toSkillDTO(ss.skill),
       type: ss.type,
     }));
+    const profileSkills = (profile?.skills || [])
+      .filter((name: string) => !skillNames.has(name))
+      .map((name: string, idx: number) => ({
+        id: `profile_skill_${idx}`,
+        skillId: "",
+        skill: {
+          id: "",
+          name,
+          category: null,
+          isActive: true,
+        },
+        type: "LEARNING" as const,
+      }));
+    const skills = [...studentSkills, ...profileSkills];
     return {
       ...toPublicUser(user),
       university: profile?.university ?? null,

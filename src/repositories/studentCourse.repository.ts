@@ -1,4 +1,4 @@
-import type { StudentCourse, StudentItemType } from "@prisma/client";
+import type { Course, StudentCourse, StudentItemType } from "@prisma/client";
 import { prisma } from "../config/database";
 
 export type StudentCourseInput = {
@@ -8,7 +8,7 @@ export type StudentCourseInput = {
 };
 
 export const studentCourseRepository = {
-  findByUserAndType(userId: string, type: StudentItemType): Promise<StudentCourse[]> {
+  findByUserAndType(userId: string, type: StudentItemType): Promise<(StudentCourse & { course: Course })[]> {
     return prisma.studentCourse.findMany({
       where: { userId, type },
       include: { course: true },
