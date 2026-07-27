@@ -22,7 +22,7 @@ function buildFrontendUser(user: any, profile: any = {}) {
     university: profile.university || "",
     department: profile.department || "",
     level: profile.level || "",
-    accountType: user.role === "ADMIN" ? "admin" : "student",
+    accountType: ["ADMIN", "SUPER_ADMIN", "MODERATOR", "SUPPORT"].includes(user.role) ? "admin" : "student",
     avatarUrl: user.profileImage || profile?.profilePhoto || user.avatarUrl || "",
     bio: profile.bio || "",
     skills: (profile.skills || []).map((skill: string, idx: number) => ({
@@ -243,8 +243,10 @@ export const frontendAuthController = {
     if (file) {
       const uploaded = await uploadImageBuffer(file.buffer, `user_${req.user.id}`);
       await authService.updateUser(req.user.id, { profileImage: uploaded.secureUrl });
+      await studentProfileRepository.setProfilePhoto(req.user.id, uploaded.secureUrl);
     } else if (req.body.avatarUrl) {
       await authService.updateUser(req.user.id, { profileImage: req.body.avatarUrl });
+      await studentProfileRepository.setProfilePhoto(req.user.id, req.body.avatarUrl);
     }
 
     const user = await authService.getMe(req.user.id);
@@ -331,6 +333,10 @@ export const frontendAuthController = {
 
     if (Object.keys(updateData).length > 0) {
       await authService.updateUser(req.user.id, updateData);
+    }
+
+    if (avatarUrl) {
+      await studentProfileRepository.setProfilePhoto(req.user.id, avatarUrl);
     }
 
     if (department || level || skills || learningInterests !== undefined || availability !== undefined || bio !== undefined) {

@@ -4,9 +4,11 @@ export interface AnnouncementWithCreator {
   id: string;
   title: string;
   message: string;
+  content?: string;
   target: string;
   targetId?: string;
-  isActive: boolean;
+  status?: string;
+  isActive?: boolean;
   scheduledAt?: Date;
   expiresAt?: Date;
   createdAt: Date;
@@ -25,7 +27,7 @@ export const announcementRepository = {
 
   async findMany(filters: any): Promise<{ items: AnnouncementWithCreator[]; totalItems: number }> {
     const where: any = {};
-    if (filters.isActive !== undefined) where.isActive = filters.isActive;
+    if (filters.status) where.status = filters.status;
     if (filters.target) where.target = filters.target;
     if (filters.createdById) where.createdById = filters.createdById;
 

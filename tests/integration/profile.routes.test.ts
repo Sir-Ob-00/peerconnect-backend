@@ -3,6 +3,7 @@ import request from "supertest";
 jest.mock("../../src/repositories/user.repository", () => ({
   userRepository: {
     findActiveById: jest.fn(),
+    update: jest.fn(),
   },
 }));
 
@@ -265,25 +266,26 @@ describe("POST /api/v1/profile/photo", () => {
     expect(res.status).toBe(400);
   });
 
-  it("uploads a valid image, calls Cloudinary, and returns the updated profile", async () => {
-    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
-    mockUpload.mockResolvedValue({
-      secureUrl: "https://res.cloudinary.com/demo/image/upload/user_1.jpg",
-      publicId: `user_${USER_ID}`,
-    });
-    mockProfileRepo.setProfilePhoto.mockResolvedValue(
-      makeProfile({ profilePhoto: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" }) as never
-    );
+   it("uploads a valid image, calls Cloudinary, saves to User.profileImage, and returns the updated profile", async () => {
+     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+     mockUpload.mockResolvedValue({
+       secureUrl: "https://res.cloudinary.com/demo/image/upload/user_1.jpg",
+       publicId: `user_${USER_ID}`,
+     });
+     mockProfileRepo.setProfilePhoto.mockResolvedValue(
+       makeProfile({ profilePhoto: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" }) as never
+     );
 
-    const res = await request(app)
-      .post("/api/v1/profile/photo")
-      .set("Authorization", `Bearer ${tokenFor(USER_ID)}`)
-      .attach("photo", Buffer.from("fake-image-bytes"), { filename: "avatar.jpg", contentType: "image/jpeg" });
+     const res = await request(app)
+       .post("/api/v1/profile/photo")
+       .set("Authorization", `Bearer ${tokenFor(USER_ID)}`)
+       .attach("photo", Buffer.from("fake-image-bytes"), { filename: "avatar.jpg", contentType: "image/jpeg" });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.profilePhoto).toBe("https://res.cloudinary.com/demo/image/upload/user_1.jpg");
-    expect(mockUpload).toHaveBeenCalledTimes(1);
-  });
+     expect(res.status).toBe(200);
+     expect(res.body.data.profilePhoto).toBe("https://res.cloudinary.com/demo/image/upload/user_1.jpg");
+     expect(mockUpload).toHaveBeenCalledTimes(1);
+     expect(mockUserRepo.update).toHaveBeenCalledWith(USER_ID, { profileImage: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" });
+   });
 });
 
 describe("GET /api/v1/profile/:id", () => {

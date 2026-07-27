@@ -68,13 +68,10 @@ export const adminReviewsController = {
     return sendSuccess(res, {
       message: "Reviews for user retrieved.",
       data: {
-        user: {
-          id: user.id,
-          fullName: `${user.firstName} ${user.lastName}`,
-          email: user.email,
-        },
-        summary,
-        data: items.map((r) => ({
+        userId: user.id,
+        averageRating: summary.averageRating,
+        totalReviews: summary.totalReviews,
+        reviews: items.map((r) => ({
           id: r.id,
           sessionId: r.sessionId,
           rating: r.rating,
@@ -84,7 +81,7 @@ export const adminReviewsController = {
             id: r.reviewer.id,
             firstName: r.reviewer.firstName,
             lastName: r.reviewer.lastName,
-            profileImage: r.reviewer.profileImage,
+            avatarUrl: r.reviewer.profileImage,
           },
         })),
         pagination: {
@@ -95,5 +92,11 @@ export const adminReviewsController = {
         },
       },
     });
+  }),
+
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    await reviewRepository.delete(id);
+    sendSuccess(res, { message: "Review deleted successfully." });
   }),
 };

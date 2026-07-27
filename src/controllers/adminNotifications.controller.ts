@@ -11,6 +11,7 @@ export const adminNotificationsController = {
     const page = parseInt((req.query.page as string) || "1", 10);
     const limit = parseInt((req.query.limit as string) || "10", 10);
     const userId = req.query.userId as string | undefined;
+    const type = req.query.type as string | undefined;
 
     let items: any[] = [];
     let totalItems = 0;
@@ -19,6 +20,14 @@ export const adminNotificationsController = {
       const result = await notificationRepository.listByUser({ userId, skip: (page - 1) * limit, take: limit });
       items = result.items;
       totalItems = result.totalItems;
+    } else {
+      const result = await notificationRepository.listAll({ skip: (page - 1) * limit, take: limit });
+      items = result.items;
+      totalItems = result.totalItems;
+    }
+
+    if (type) {
+      items = items.filter((n) => n.type === type);
     }
 
     sendSuccess(res, {
@@ -40,13 +49,13 @@ export const adminNotificationsController = {
       userId,
       title,
       message,
-      type: type || "SESSION_REQUEST",
+      type: (type || "DIRECT") as any,
     });
     sendSuccess(res, { statusCode: 201, message: "Notification sent.", data: notification });
   }),
 
   broadcast: asyncHandler(async (req: Request, res: Response) => {
-    const { title, message } = req.body;
+    const { title, message, targetAudience, targetValue } = req.body;
     const users = await userRepository.findMany({});
     const notifications = await Promise.all(
       users.items.map((u: any) =>
@@ -54,11 +63,13 @@ export const adminNotificationsController = {
           userId: u.id,
           title,
           message,
-          type: "SESSION_REQUEST",
+          type: "BROADCAST",
+          entityType: targetAudience || "ALL",
+          entityId: targetValue || null,
         })
       )
     );
-    sendSuccess(res, { statusCode: 201, message: `Broadcast sent to ${notifications.length} users.`, data: { count: notifications.length } });
+    sendSuccess(res, { statusCode: 201, message: `Broadcast sent to ${notifications.length} users.`, data: notifications });
   }),
 
   delete: asyncHandler(async (req: Request, res: Response) => {

@@ -110,4 +110,8 @@ export const reviewRepository = {
     ]);
     return { items, totalItems };
   },
+
+  async delete(id: string): Promise<void> {
+    await prisma.review.delete({ where: { id } });
+  },
 };

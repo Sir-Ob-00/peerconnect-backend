@@ -53,7 +53,7 @@ const options: swaggerJsdoc.Options = {
             firstName: { type: "string", example: "Ama" },
             lastName: { type: "string", example: "Mensah" },
             email: { type: "string", format: "email", example: "ama.mensah@st.university.edu.gh" },
-            role: { type: "string", enum: ["STUDENT", "ADMIN"], example: "STUDENT" },
+            role: { type: "string", enum: ["STUDENT", "ADMIN", "SUPER_ADMIN", "MODERATOR", "SUPPORT"], example: "STUDENT" },
             accountStatus: { type: "string", enum: ["ACTIVE", "INACTIVE", "SUSPENDED"], example: "ACTIVE" },
             profileImage: { type: "string", nullable: true, example: null },
             isEmailVerified: { type: "boolean", example: false },

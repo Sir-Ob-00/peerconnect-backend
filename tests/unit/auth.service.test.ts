@@ -383,19 +383,39 @@ describe("authService.getMe", () => {
      expect(result.email).toBe("ama.mensah@st.university.edu.gh");
    });
 
-   it("includes courses and skills in the response", async () => {
-     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
-     mockProfileRepo.findByUserId.mockResolvedValue(null);
-     mockCourseRepo.findByUserAndType
-       .mockResolvedValueOnce([{ id: "course-1", courseId: "c1", course: { id: "c1", name: "Math 101", code: "MATH101", universityId: "u1", custom: false, isActive: true }, type: "LEARNING", createdAt: new Date() }])
-       .mockResolvedValueOnce([]);
-     mockSkillRepo.findByUserAndType
-       .mockResolvedValueOnce([{ id: "skill-1", skillId: "s1", skill: { id: "s1", name: "React", category: "Frontend", isActive: true }, type: "LEARNING", createdAt: new Date() }])
-       .mockResolvedValueOnce([]);
-     const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
-     expect(result.courses).toHaveLength(1);
-     expect(result.courses[0].course.name).toBe("Math 101");
-     expect(result.skills).toHaveLength(1);
-     expect(result.skills[0].skill.name).toBe("React");
-   });
- });
+    it("includes courses and skills in the response", async () => {
+      mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+      mockProfileRepo.findByUserId.mockResolvedValue(null);
+      mockCourseRepo.findByUserAndType
+        .mockResolvedValueOnce([{ id: "course-1", courseId: "c1", course: { id: "c1", name: "Math 101", code: "MATH101", universityId: "u1", custom: false, isActive: true }, type: "LEARNING", createdAt: new Date() }])
+        .mockResolvedValueOnce([]);
+      mockSkillRepo.findByUserAndType
+        .mockResolvedValueOnce([{ id: "skill-1", skillId: "s1", skill: { id: "s1", name: "React", category: "Frontend", isActive: true }, type: "LEARNING", createdAt: new Date() }])
+        .mockResolvedValueOnce([]);
+      const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
+      expect(result.courses).toHaveLength(1);
+      expect(result.courses[0].course.name).toBe("Math 101");
+      expect(result.skills).toHaveLength(1);
+      expect(result.skills[0].skill.name).toBe("React");
+    });
+
+    it("returns user.profileImage as avatarUrl when StudentProfile.profilePhoto is null", async () => {
+      mockUserRepo.findActiveById.mockResolvedValue(makeUser({ profileImage: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" }) as never);
+      mockProfileRepo.findByUserId.mockResolvedValue(null);
+      mockCourseRepo.findByUserAndType.mockResolvedValue([]);
+      mockSkillRepo.findByUserAndType.mockResolvedValue([]);
+      const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
+      expect(result.avatarUrl).toBe("https://res.cloudinary.com/demo/image/upload/user_1.jpg");
+    });
+
+    it("returns StudentProfile.profilePhoto as avatarUrl when User.profileImage is null", async () => {
+      mockUserRepo.findActiveById.mockResolvedValue(makeUser({ profileImage: null }) as never);
+      mockProfileRepo.findByUserId.mockResolvedValue(
+        ({ profilePhoto: "https://res.cloudinary.com/demo/image/upload/user_2.jpg" } as never)
+      );
+      mockCourseRepo.findByUserAndType.mockResolvedValue([]);
+      mockSkillRepo.findByUserAndType.mockResolvedValue([]);
+      const result = await authService.getMe("11111111-1111-1111-1111-111111111111");
+      expect(result.avatarUrl).toBe("https://res.cloudinary.com/demo/image/upload/user_2.jpg");
+    });
+  });

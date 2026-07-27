@@ -2,7 +2,7 @@ import { Router } from "express";
 import { adminAdminsController } from "../../controllers/adminAdmins.controller";
 import { authenticate, requireAdmin } from "../../middlewares/authenticate";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { adminAdminsQuerySchema, adminCreateAdminSchema } from "../../validators/admin.validator";
+import { adminAdminsQuerySchema, adminCreateAdminSchema, adminUpdateAdminSchema } from "../../validators/admin.validator";
 import { uuidParamSchema } from "../../validators/common.validator";
 
 export const adminAdminsRouter = Router();
@@ -27,7 +27,7 @@ adminAdminsRouter.patch(
   "/admins/:id",
   authenticate,
   requireAdmin,
-  validateRequest({ params: uuidParamSchema }),
+  validateRequest({ params: uuidParamSchema, body: adminUpdateAdminSchema }),
   adminAdminsController.update
 );
 

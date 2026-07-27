@@ -56,12 +56,12 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   next();
 }
 
-/** Must run after `authenticate`. Rejects any caller whose role isn't ADMIN. */
+/** Must run after `authenticate`. Rejects any caller whose role isn't ADMIN-tier. */
 export function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) {
     return next(ApiError.unauthorized("Authentication required."));
   }
-  if (req.user.role !== "ADMIN") {
+  if (!["ADMIN", "SUPER_ADMIN", "MODERATOR", "SUPPORT"].includes(req.user.role)) {
     return next(ApiError.forbidden("This action requires administrator privileges."));
   }
   next();

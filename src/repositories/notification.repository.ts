@@ -9,6 +9,9 @@ interface CreateNotificationData {
   type: NotificationType;
   entityId?: string | null;
   entityType?: string | null;
+  targetType?: string | null;
+  targetValue?: string | null;
+  sentAt?: Date | null;
 }
 
 interface ListResult {
@@ -27,6 +30,9 @@ export const notificationRepository = {
         type: data.type,
         entityId: data.entityId || null,
         entityType: data.entityType || null,
+        targetType: data.targetType || null,
+        targetValue: data.targetValue || null,
+        sentAt: data.sentAt || null,
       },
       include: { sender: true },
     });
@@ -51,15 +57,19 @@ export const notificationRepository = {
     return { items, totalItems };
   },
 
-  async listAll({ skip, take }: { skip: number; take: number }): Promise<ListResult> {
+  async listAll({ skip, take, type }: { skip: number; take: number; type?: string }): Promise<ListResult> {
+    const where: any = {};
+    if (type) where.type = type;
+
     const [items, totalItems] = await Promise.all([
       prisma.notification.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         skip,
         take,
         include: { sender: true },
       }),
-      prisma.notification.count(),
+      prisma.notification.count({ where }),
     ]);
     return { items, totalItems };
   },

@@ -8,10 +8,11 @@ export const adminAuditLogsController = {
   list: asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt((req.query.page as string) || "1", 10);
     const limit = parseInt((req.query.limit as string) || "10", 10);
-    const actorId = req.query.actorId as string | undefined;
-    const entityType = req.query.entityType as string | undefined;
     const action = req.query.action as string | undefined;
-    const data = await auditLogsService.list(actorId, entityType, action, page, limit);
+    const adminId = req.query.adminId as string | undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+    const data = await auditLogsService.list(action, adminId, startDate, endDate, page, limit);
     sendSuccess(res, { message: "Audit logs retrieved.", data });
   }),
 

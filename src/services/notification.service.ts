@@ -14,6 +14,9 @@ export interface CreateNotificationInput {
   type: NotificationType;
   entityId?: string | null;
   entityType?: string | null;
+  targetType?: string | null;
+  targetValue?: string | null;
+  sentAt?: Date | null;
 }
 
 export const notificationService = {

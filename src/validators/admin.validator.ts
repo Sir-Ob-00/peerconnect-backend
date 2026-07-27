@@ -7,7 +7,7 @@ export const paginationQuerySchema = z.object({
 
 export const adminStudentsQuerySchema = paginationQuerySchema.extend({
   search: z.string().optional(),
-  role: z.enum(["STUDENT", "ADMIN"]).optional(),
+  role: z.enum(["STUDENT", "ADMIN", "SUPER_ADMIN", "MODERATOR", "SUPPORT"]).optional(),
   verificationStatus: z.string().optional(),
   accountStatus: z.string().optional(),
 });
@@ -30,15 +30,17 @@ export const adminReportsQuerySchema = paginationQuerySchema.extend({
   reportedUserId: z.string().uuid().optional(),
 });
 export const adminAuditLogsQuerySchema = paginationQuerySchema.extend({
-  actorId: z.string().uuid().optional(),
-  entityType: z.string().optional(),
+  search: z.string().optional(),
   action: z.string().optional(),
+  adminId: z.string().uuid().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
 });
 export const adminAnnouncementsQuerySchema = paginationQuerySchema.extend({
-  isActive: z.string().optional(),
-  target: z.string().optional(),
+  search: z.string().optional(),
+  status: z.enum(["PUBLISHED", "DRAFT"]).optional(),
 });
-export const adminNotificationsQuerySchema = paginationQuerySchema.extend({ userId: z.string().uuid().optional() });
+export const adminNotificationsQuerySchema = paginationQuerySchema.extend({ userId: z.string().uuid().optional(), type: z.string().optional() });
 export const adminSettingsQuerySchema = paginationQuerySchema.extend({ category: z.string().optional() });
 export const adminAdminsQuerySchema = paginationQuerySchema.extend({ search: z.string().optional() });
 export const adminSuspendStudentSchema = z.object({ reason: z.string().max(500).optional() });
@@ -99,12 +101,20 @@ export const adminUpdateReportSchema = z.object({
 });
 export const adminCreateAnnouncementSchema = z.object({
   title: z.string().min(3).max(200),
-  message: z.string().min(10).max(5000),
-  target: z.enum(["ALL", "UNIVERSITY", "DEPARTMENT", "PROGRAMME", "LEVEL"]).optional(),
-  targetId: z.string().optional(),
-  scheduledAt: z.string().optional(),
-  expiresAt: z.string().optional(),
+  content: z.string().min(10).max(5000),
+  targetAudience: z.enum(["ALL", "UNIVERSITY", "DEPARTMENT", "PROGRAMME", "LEVEL"]).optional(),
+  targetValue: z.string().optional(),
+  status: z.enum(["PUBLISHED", "DRAFT"]).optional(),
 });
+export const adminUpdateAnnouncementSchema = adminCreateAnnouncementSchema.partial();
+export const adminUpdateAdminSchema = z.object({
+  firstName: z.string().min(2).optional(),
+  lastName: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(["ADMIN", "SUPER_ADMIN", "MODERATOR", "SUPPORT"]).optional(),
+  accountStatus: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+});
+export const notificationBroadcastSchema = z.object({ title: z.string().min(2), message: z.string().min(2), targetAudience: z.string().optional(), targetValue: z.string().optional() });
 export const adminCreateSettingSchema = z.object({
   key: z.string().min(2).max(100),
   value: z.string(),
@@ -126,7 +136,6 @@ export const adminCreateAdminSchema = z.object({
   role: z.enum(["ADMIN", "STUDENT"]).optional(),
 });
 export const levelReorderSchema = z.object({ items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.coerce.number().int() })) });
-export const notificationBroadcastSchema = z.object({ title: z.string().min(2), message: z.string().min(2) });
 
 export const adminSessionsQuerySchema = paginationQuerySchema.extend({
   status: z.string().optional(),

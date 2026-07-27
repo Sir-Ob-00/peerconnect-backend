@@ -293,7 +293,7 @@ export const authService = {
       department: profile?.department ?? null,
       programme: profile?.programme ?? null,
       level: profile?.level ?? null,
-      avatarUrl: profile?.profilePhoto ?? null,
+       avatarUrl: user.profileImage ?? profile?.profilePhoto ?? null,
       courses,
       skills,
     };

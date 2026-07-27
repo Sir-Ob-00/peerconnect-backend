@@ -8,9 +8,23 @@ export const adminAnnouncementsController = {
   list: asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt((req.query.page as string) || "1", 10);
     const limit = parseInt((req.query.limit as string) || "10", 10);
-    const target = req.query.target as string | undefined;
-    const isActive = req.query.isActive === "true" ? true : req.query.isActive === "false" ? false : undefined;
-    const data = await announcementsService.list(target, isActive, page, limit);
+    const search = req.query.search as string | undefined;
+    const status = req.query.status as string | undefined;
+    const result = await announcementsService.list(search, status, page, limit);
+    const data = {
+      data: result.data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        content: item.message,
+        targetAudience: item.target,
+        targetValue: item.targetId,
+        status: item.status,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        createdBy: item.createdBy,
+      })),
+      pagination: result.pagination,
+    };
     sendSuccess(res, { message: "Announcements retrieved.", data });
   }),
 
@@ -18,18 +32,53 @@ export const adminAnnouncementsController = {
     const { id } = req.params;
     const announcement = await announcementsService.getById(id);
     if (!announcement) throw ApiError.notFound("Announcement not found");
-    sendSuccess(res, { message: "Announcement retrieved.", data: announcement });
+    const data = {
+      id: announcement.id,
+      title: announcement.title,
+      content: announcement.message,
+      targetAudience: announcement.target,
+      targetValue: announcement.targetId,
+      status: announcement.status,
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt,
+      createdBy: announcement.createdBy,
+    };
+    sendSuccess(res, { message: "Announcement retrieved.", data });
   }),
 
   create: asyncHandler(async (req: Request, res: Response) => {
     const createdById = (req as any).user?.id;
-    const data = await announcementsService.create({ ...req.body, createdById });
+    const { content, ...rest } = req.body;
+    const announcement = await announcementsService.create({ ...rest, message: content, createdById });
+    const data = {
+      id: announcement.id,
+      title: announcement.title,
+      content: announcement.message,
+      targetAudience: announcement.target,
+      targetValue: announcement.targetId,
+      status: announcement.status,
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt,
+      createdBy: announcement.createdBy,
+    };
     sendSuccess(res, { statusCode: 201, message: "Announcement created.", data });
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const data = await announcementsService.update(id, req.body);
+    const { content, ...rest } = req.body;
+    const announcement = await announcementsService.update(id, { ...rest, message: content });
+    const data = {
+      id: announcement.id,
+      title: announcement.title,
+      content: announcement.message,
+      targetAudience: announcement.target,
+      targetValue: announcement.targetId,
+      status: announcement.status,
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt,
+      createdBy: announcement.createdBy,
+    };
     sendSuccess(res, { message: "Announcement updated.", data });
   }),
 

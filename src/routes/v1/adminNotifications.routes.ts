@@ -6,6 +6,13 @@ import { validateRequest } from "../../middlewares/validateRequest";
 import { adminNotificationsQuerySchema, notificationBroadcastSchema } from "../../validators/admin.validator";
 import { uuidParamSchema } from "../../validators/common.validator";
 
+const adminDirectNotificationSchema = z.object({
+  userId: z.string().uuid(),
+  title: z.string().min(2),
+  message: z.string().min(2),
+  type: z.string().optional(),
+});
+
 export const adminNotificationsRouter = Router();
 
 adminNotificationsRouter.get(
@@ -20,7 +27,7 @@ adminNotificationsRouter.post(
   "/notifications",
   authenticate,
   requireAdmin,
-  validateRequest({ body: notificationBroadcastSchema.extend({ userId: z.string().uuid().optional() }) }),
+  validateRequest({ body: adminDirectNotificationSchema }),
   adminNotificationsController.create
 );
 

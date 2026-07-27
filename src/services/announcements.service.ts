@@ -2,11 +2,16 @@ import { prisma } from "../config/database";
 import { announcementRepository } from "../repositories/announcement.repository";
 
 export const announcementsService = {
-  async list(target?: string, isActive?: boolean, page = 1, limit = 10) {
+  async list(search?: string, status?: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
     const where: any = {};
-    if (target) where.target = target as any;
-    if (isActive !== undefined) where.isActive = isActive;
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { message: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const [items, totalItems] = await Promise.all([
       (prisma as any).announcement.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: limit }),
@@ -23,7 +28,7 @@ export const announcementsService = {
     return announcementRepository.findById(id);
   },
 
-  async create(data: { title: string; message: string; target?: string; targetId?: string; createdById: string; scheduledAt?: Date; expiresAt?: Date }) {
+  async create(data: { title: string; message: string; target?: string; targetId?: string; createdById: string; scheduledAt?: Date; expiresAt?: Date; status?: string }) {
     return announcementRepository.create({
       title: data.title,
       message: data.message,
@@ -32,10 +37,11 @@ export const announcementsService = {
       createdById: data.createdById,
       scheduledAt: data.scheduledAt,
       expiresAt: data.expiresAt,
+      status: (data.status as any) || "PUBLISHED",
     });
   },
 
-  async update(id: string, data: { title?: string; message?: string; target?: string; targetId?: string; isActive?: boolean; scheduledAt?: Date; expiresAt?: Date }) {
+  async update(id: string, data: { title?: string; message?: string; target?: string; targetId?: string; isActive?: boolean; scheduledAt?: Date; expiresAt?: Date; status?: string }) {
     return announcementRepository.update(id, data as any);
   },
 

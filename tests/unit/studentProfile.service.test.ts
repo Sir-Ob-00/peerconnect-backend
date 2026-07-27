@@ -1,6 +1,7 @@
 jest.mock("../../src/repositories/user.repository", () => ({
   userRepository: {
     findActiveById: jest.fn(),
+    update: jest.fn(),
   },
 }));
 
@@ -159,22 +160,23 @@ describe("studentProfileService.uploadProfilePhoto", () => {
     expect(mockUpload).not.toHaveBeenCalled();
   });
 
-  it("uploads to Cloudinary with a per-user public id and saves the returned URL", async () => {
-    mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
-    mockUpload.mockResolvedValue({ secureUrl: "https://res.cloudinary.com/demo/image/upload/user_1.jpg", publicId: `user_${USER_ID}` });
-    mockProfileRepo.setProfilePhoto.mockResolvedValue(
-      makeProfile({ profilePhoto: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" }) as never
-    );
+   it("uploads to Cloudinary with a per-user public id, saves URL to User.profileImage and StudentProfile.profilePhoto", async () => {
+     mockUserRepo.findActiveById.mockResolvedValue(makeUser() as never);
+     mockUpload.mockResolvedValue({ secureUrl: "https://res.cloudinary.com/demo/image/upload/user_1.jpg", publicId: `user_${USER_ID}` });
+     mockProfileRepo.setProfilePhoto.mockResolvedValue(
+       makeProfile({ profilePhoto: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" }) as never
+     );
 
-    const result = await studentProfileService.uploadProfilePhoto(USER_ID, file);
+     const result = await studentProfileService.uploadProfilePhoto(USER_ID, file);
 
-    expect(mockUpload).toHaveBeenCalledWith(file.buffer, `user_${USER_ID}`);
-    expect(mockProfileRepo.setProfilePhoto).toHaveBeenCalledWith(
-      USER_ID,
-      "https://res.cloudinary.com/demo/image/upload/user_1.jpg"
-    );
-    expect(result.profilePhoto).toBe("https://res.cloudinary.com/demo/image/upload/user_1.jpg");
-  });
+     expect(mockUpload).toHaveBeenCalledWith(file.buffer, `user_${USER_ID}`);
+     expect(mockUserRepo.update).toHaveBeenCalledWith(USER_ID, { profileImage: "https://res.cloudinary.com/demo/image/upload/user_1.jpg" });
+     expect(mockProfileRepo.setProfilePhoto).toHaveBeenCalledWith(
+       USER_ID,
+       "https://res.cloudinary.com/demo/image/upload/user_1.jpg"
+     );
+     expect(result.profilePhoto).toBe("https://res.cloudinary.com/demo/image/upload/user_1.jpg");
+   });
 });
 
 describe("studentProfileService.getPublicProfile", () => {

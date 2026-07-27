@@ -1,9 +1,9 @@
 import { auditLogRepository } from "../repositories/auditLog.repository";
 
 export const auditLogsService = {
-  async list(actorId?: string, entityType?: string, action?: string, page = 1, limit = 10) {
+  async list(action?: string, adminId?: string, startDate?: string, endDate?: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
-    const result = await auditLogRepository.findMany({ actorId, entityType, action, skip, take: limit });
+    const result = await auditLogRepository.findMany({ action, adminId, startDate, endDate, skip, take: limit });
     return {
       data: result.items,
       pagination: { page, limit, totalItems: result.totalItems, totalPages: Math.ceil(result.totalItems / limit) },
@@ -27,14 +27,8 @@ export const auditLogsService = {
   },
 
   async getStats() {
-    const totalLogs = await auditLogRepository.findMany({ skip: 0, take: 0 });
-    const total = totalLogs.totalItems;
-    const byAction: Record<string, number> = {};
-    const recent = await auditLogRepository.findMany({ skip: 0, take: 100 });
-    for (const log of recent.items) {
-      const key = log.action;
-      byAction[key] = (byAction[key] || 0) + 1;
-    }
-    return { total, byAction, recentCount: recent.items.length };
+    const totalLogs = await auditLogRepository.count();
+    const byAction = await auditLogRepository.countByAction();
+    return { totalLogs, actionsBreakdown: byAction };
   },
 };

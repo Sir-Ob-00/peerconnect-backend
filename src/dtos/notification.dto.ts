@@ -15,6 +15,9 @@ export interface NotificationView {
   readAt: string | null;
   entityId: string | null;
   entityType: string | null;
+  targetType: string | null;
+  targetValue: string | null;
+  sentAt: string | null;
   sender: SenderInfo | null;
   createdAt: string;
 }
@@ -29,6 +32,9 @@ export function toNotificationView(notification: Notification & { sender?: User 
     readAt: notification.readAt ? notification.readAt.toISOString() : null,
     entityId: notification.entityId,
     entityType: notification.entityType,
+    targetType: notification.targetType ?? null,
+    targetValue: notification.targetValue ?? null,
+    sentAt: notification.sentAt ? notification.sentAt.toISOString() : null,
     sender: notification.sender
       ? {
           id: notification.sender.id,

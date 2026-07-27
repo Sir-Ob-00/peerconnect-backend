@@ -22,3 +22,11 @@ adminReviewsRouter.get(
   validateRequest({ params: uuidParamSchema }),
   adminReviewsController.getByUserId
 );
+
+adminReviewsRouter.delete(
+  "/reviews/:id",
+  authenticate,
+  requireAdmin,
+  validateRequest({ params: uuidParamSchema }),
+  adminReviewsController.remove
+);

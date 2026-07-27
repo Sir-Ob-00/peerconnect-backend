@@ -540,6 +540,7 @@ export const onboardingService = {
     }
 
     const uploaded = await uploadImageBuffer(file.buffer, `user_${userId}`);
+    await userRepository.update(userId, { profileImage: uploaded.secureUrl });
     const updated = await studentProfileRepository.setProfilePhoto(userId, uploaded.secureUrl);
 
     return {

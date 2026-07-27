@@ -35,7 +35,7 @@ export const adminsService = {
     });
   },
 
-  async updateAdmin(id: string, data: { firstName?: string; lastName?: string; email?: string; role?: string }) {
+  async updateAdmin(id: string, data: { firstName?: string; lastName?: string; email?: string; role?: string; accountStatus?: string }) {
     const user = await userRepository.findById(id);
     if (!user || user.role !== "ADMIN") throw ApiError.notFound("Admin not found.");
 
@@ -48,6 +48,7 @@ export const adminsService = {
       updateData.email = data.email.trim().toLowerCase();
     }
     if (data.role !== undefined) updateData.role = data.role as any;
+    if (data.accountStatus !== undefined) updateData.accountStatus = data.accountStatus as any;
 
     return userRepository.update(id, updateData);
   },

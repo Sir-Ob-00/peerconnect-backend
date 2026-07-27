@@ -25,6 +25,9 @@ datasource db {
 enum Role {
   STUDENT
   ADMIN
+  SUPER_ADMIN
+  MODERATOR
+  SUPPORT
 }
 
 enum AccountStatus {
@@ -315,6 +318,8 @@ enum NotificationType {
   SESSION_REQUEST
   SESSION_ACCEPTED
   CHAT_MESSAGE
+  DIRECT
+  BROADCAST
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +338,9 @@ model Notification {
   readAt    DateTime?
   entityId  String?
   entityType String?
+  targetType String?
+  targetValue String?
+  sentAt    DateTime?
   createdAt DateTime         @default(now())
   @@index([userId, isRead])
   @@index([userId, createdAt])
@@ -738,22 +746,27 @@ enum AnnouncementTarget {
   LEVEL
 }
 
+enum AnnouncementStatus {
+  PUBLISHED
+  DRAFT
+}
+
 model Announcement {
   id          String              @id @default(uuid())
   title       String
   message     String
   target      AnnouncementTarget @default(ALL)
   targetId    String?
+  status      AnnouncementStatus @default(PUBLISHED)
   createdById String
   createdBy   User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  isActive    Boolean             @default(true)
   scheduledAt DateTime?
   expiresAt   DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
   @@index([createdById])
-  @@index([isActive])
+  @@index([status])
   @@map("announcements")
 }
 
